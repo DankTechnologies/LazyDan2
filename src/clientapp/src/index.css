@@ -1,0 +1,61 @@
+/* Tablet and Desktop styles */
+@media screen and (min-width: 769px) {
+  body, h1, h2, h3, h4, h5, h6, .title, .subtitle, p, .button, .input, .textarea, .select {
+    font-size: 17px !important;
+  }
+}
+
+.topControls {
+  display: flex;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+/* Fix the player container to take up 100% width and to calculate its height based on its children. */
+[data-player] {
+  position: relative;
+  width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+/* Fix the video container to take up 100% width and to calculate its height based on its children. */
+[data-player] .container[data-container] {
+  width: 100%;
+  height: auto;
+  position: relative;
+  max-width: inherit !important;
+}
+
+/* Fix the media-control element to take up the entire size of the player. */
+[data-player] .media-control[data-media-control] {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* Fix the video element to take up 100% width and to calculate its height based on its natural aspect ratio. */
+[data-player] video {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.table-wrapper {
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.fixed-header-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fixed-header-table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}

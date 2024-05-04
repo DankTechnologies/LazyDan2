@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Publish dotnet
+      command: dotnet publish -c Release
+      args:
+        chdir: src
+
+    - name: Build Docker image
+      command: docker build -t lazydan2 .
+      args:
+        chdir: src
+
+    - name: Save Docker image
+      shell: docker save lazydan2 > /mnt/shares/downloads/lazydan2.tar
+
+- hosts: bigjang
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Stop Docker container
+      docker_container:
+        name: LazyDan2
+        state: absent
+
+    - name: Load Docker image
+      command: docker load -i /mnt/user/downloads/lazydan2.tar
+
+    - name: Run Docker container
+      docker_container:
+        name: LazyDan2
+        image: lazydan2
+        state: started
+        restart_policy: unless-stopped
+        published_ports: "8081:8080"
+        user: "99:100"
+        env:
+          TZ: "America/Chicago"
+          DownloadPath: "/data/tv"
+        volumes:
+          - "/mnt/user/documents/lazydan2:/data/lazydan2"
+          - "/mnt/user/tv:/data/tv"

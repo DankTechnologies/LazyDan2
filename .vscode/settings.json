@@ -1,0 +1,4 @@
+{
+    "dotnet.defaultSolution": "LazyDan2.sln",
+    "ansible.python.interpreterPath": "/bin/python3"
+}

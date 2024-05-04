@@ -1,0 +1,138 @@
+using System.Diagnostics;
+using System.Reflection;
+using Hangfire;
+using LazyDan2.Services;
+using LazyDan2.Types;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using NUnit.Framework;
+
+public class StreamServiceStub
+{
+    private readonly ILogger<StreamService> logger = new LoggerFactory().CreateLogger<StreamService>();
+    private readonly ILogger<PosterService> posterLogger = new LoggerFactory().CreateLogger<PosterService>();
+    private readonly HttpClient httpClient = new HttpClient();
+    private readonly GameContext context = new GameContext(new DbContextOptionsBuilder<GameContext>().UseSqlite("Data Source=/data/lazydan2/games.db").Options);
+    private IBackgroundJobClient backgroundJobClient;
+    private readonly IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
+    private readonly string lazyDanUrl = "https://lazy.pitpat.me";
+
+    [Test]
+    public async Task GetNfoXml()
+    {
+        var game = new Game
+        {
+            AwayTeam = "Chicago Cubs",
+            HomeTeam = "St. Louis Cardinals",
+            GameTime = DateTime.Now,
+            League = "MLB"
+        };
+
+        var attempt = 1;
+
+        var nfoXml = StreamService.GetNfoFile(game, attempt);
+
+        Debug.WriteLine(nfoXml.ToString());
+    }
+
+    [Test]
+    public async Task GetGameStreamStub()
+    {
+        var league = League.Cfb;
+        var team = "Arizona State";
+
+        var gameStreamProviderTypes = Assembly.Load("LazyDan2").GetTypes()
+            .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
+            .ToList();
+
+
+        // Create instances of those types
+        var gameStreamProviders = gameStreamProviderTypes
+            .Select(type => (IGameStreamProvider)Activator.CreateInstance(type, new HttpClient()))
+            .ToList();
+
+        var gameService = new GameService(context, httpClient, backgroundJobClient, cache, configuration);
+        var posterService = new PosterService(posterLogger);
+        var streamService = new StreamService(logger, cache, gameStreamProviders, configuration, gameService, httpClient, posterService);
+
+        var result = await streamService.GetGameStream(league, team);
+        Console.WriteLine("Result: " + result.Url);
+        Console.WriteLine("Provider: " + result.Provider);
+    }
+
+    [Test]
+    public async Task GetGameStreamFromSpecificProviderStub()
+    {
+        var providerName = "MethStreamsService";
+        var league = League.Nhl;
+        var team = "Edmonton Oilers";
+
+        var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
+        Console.WriteLine(url);
+    }
+
+    [Test]
+    public async Task GameStreamReportCard()
+    {
+        var providerNames = Assembly.Load("LazyDan2").GetTypes()
+            .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
+            .Select(x => x.Name);
+
+        var league = League.Nba;
+        var team = "New York Knicks";
+
+        foreach (var providerName in providerNames)
+        {
+            try
+            {
+                var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
+                Console.WriteLine($"{providerName} - OK - {url}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{providerName} - {ex.Message}");
+            }
+        }
+    }
+
+    private async Task<string> GetGameStreamFromSpecificProvider(string providerName, string league, string team)
+    {
+        var provider = Assembly.Load("LazyDan2").GetTypes()
+            .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
+            .FirstOrDefault(x => x.Name == providerName);
+
+        object[] constructorArgs = { new HttpClient() };
+        var instance = (IGameStreamProvider)Activator.CreateInstance(provider, constructorArgs);
+
+        if (!instance.IsEnabled)
+            throw new Exception("Disabled");
+
+        string spoofUrl = null;
+        spoofUrl = league switch
+        {
+            League.Mlb => await instance.GetMlbStream(team),
+            League.Nba => await instance.GetNbaStream(team),
+            League.Nfl => await instance.GetNflStream(team),
+            League.Nhl => await instance.GetNhlStream(team),
+            League.Cfb => await instance.GetCfbStream(team),
+            _ => throw new Exception("Invalid league"),
+        };
+        var response = await httpClient.GetAsync($"{lazyDanUrl}{spoofUrl}");
+        response.EnsureSuccessStatusCode();
+
+        return spoofUrl;
+    }
+
+    [OneTimeTearDown]
+    public void TearDown()
+    {
+        httpClient.Dispose();
+        context.Dispose();
+        cache.Dispose();
+    }
+
+}
