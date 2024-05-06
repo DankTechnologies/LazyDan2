@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Coravel;
+using LazyDan2.Jobs;
 using LazyDan2.Middleware;
 using LazyDan2.Services;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,11 @@ foreach (var type in gameStreamProviders)
     builder.Services.AddTransient(typeof(IGameStreamProvider), type);
 }
 
+// Coravel
+builder.Services.AddTransient<UpdateEpgJob>();
+builder.Services.AddTransient<UpdateGamesJob>();
+builder.Services.AddScheduler();
+
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers()
    .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
@@ -50,6 +57,18 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<GameContext>();
     dbContext.Database.EnsureCreated();
 }
+
+// Coravel
+app.Services.UseScheduler(scheduler => {
+    scheduler
+        .Schedule<UpdateGamesJob>()
+        .EveryMinute()
+        .PreventOverlapping(nameof(UpdateGamesJob));
+
+    scheduler
+        .Schedule<UpdateEpgJob>()
+        .Daily();
+});
 
 // Middleware
 

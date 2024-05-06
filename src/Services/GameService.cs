@@ -112,7 +112,7 @@ public class GameService
                     continue;
                 }
 
-                var match = _context.Games.SingleOrDefault(g => g.League == League.Mlb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+                var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Mlb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
                 if (match == null)
                 {
@@ -172,7 +172,7 @@ public class GameService
                 continue;
             }
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nba && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nba && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
@@ -218,7 +218,7 @@ public class GameService
                 continue;
             }
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nfl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nfl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
@@ -269,7 +269,7 @@ public class GameService
                 continue;
             }
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nhl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nhl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
@@ -323,7 +323,7 @@ public class GameService
                     ? GameState.InProgress
                     : "Scheduled";
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Cfb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Cfb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
