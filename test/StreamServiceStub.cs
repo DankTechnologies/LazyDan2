@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using Hangfire;
 using LazyDan2.Services;
 using LazyDan2.Types;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +14,6 @@ public class StreamServiceStub
     private readonly ILogger<PosterService> posterLogger = new LoggerFactory().CreateLogger<PosterService>();
     private readonly HttpClient httpClient = new HttpClient();
     private readonly GameContext context = new GameContext(new DbContextOptionsBuilder<GameContext>().UseSqlite("Data Source=/data/lazydan2/games.db").Options);
-    private IBackgroundJobClient backgroundJobClient;
     private readonly IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
     private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
@@ -55,7 +53,7 @@ public class StreamServiceStub
             .Select(type => (IGameStreamProvider)Activator.CreateInstance(type, new HttpClient()))
             .ToList();
 
-        var gameService = new GameService(context, httpClient, backgroundJobClient, cache, configuration);
+        var gameService = new GameService(context, httpClient, configuration);
         var posterService = new PosterService(posterLogger);
         var streamService = new StreamService(logger, cache, gameStreamProviders, configuration, gameService, httpClient, posterService);
 

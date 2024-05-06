@@ -1,8 +1,6 @@
 using System.Globalization;
-using Hangfire;
 using LazyDan2.Types;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json.Linq;
 
 namespace LazyDan2.Services;
@@ -11,8 +9,6 @@ public class GameService
 {
     private readonly GameContext _context;
     private readonly HttpClient _httpClient;
-    private readonly IBackgroundJobClient _backgroundJobClient;
-    private readonly IMemoryCache _memoryCache;
     private readonly string _cfbDataToken;
     private const string _nhlDateTimeFormat = "yyyy-MM-dd HH:mm:ss 'UTC'";
 
@@ -23,12 +19,10 @@ public class GameService
     private static readonly string _nhlScheduleApi = "https://duckduckgo.com/sports.js?q=nhl&league=nhl&type=games&o=json"; // This API doesn't seem to need a year parameter
     private static readonly string _cfbScheduleApi = $"https://api.collegefootballdata.com/games?year={CurrentYear}&division=fbs";
 
-    public GameService(GameContext context, HttpClient httpClient, IBackgroundJobClient backgroundJobClient, IMemoryCache memoryCache, IConfiguration configuration)
+    public GameService(GameContext context, HttpClient httpClient, IConfiguration configuration)
     {
         _context = context;
         _httpClient = httpClient;
-        _backgroundJobClient = backgroundJobClient;
-        _memoryCache = memoryCache;
         _cfbDataToken = configuration["CfbDataToken"];
     }
 
@@ -67,9 +61,6 @@ public class GameService
 
     public Dvr ScheduleDownload(Game game)
     {
-        var jobId = _backgroundJobClient.Schedule<StreamService>(x => x.DownloadGame(game), DateTime.SpecifyKind(game.GameTime, DateTimeKind.Utc));
-        _memoryCache.Set(game.Id, jobId);
-
         var dvr = new Dvr
         {
             GameId = game.Id,
@@ -84,11 +75,6 @@ public class GameService
 
     public void CancelDownload(Game game)
     {
-        if (_memoryCache.TryGetValue(game.Id, out string jobId))
-        {
-            _backgroundJobClient.Delete(jobId);
-        }
-
         _context.Dvrs.Remove(game.Dvr);
         _context.SaveChanges();
     }
@@ -100,7 +86,6 @@ public class GameService
         return dvr;
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateMlb()
     {
         var response = await _httpClient.GetAsync(_mlbScheduleApi);
@@ -151,7 +136,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNba()
     {
         var response = await _httpClient.GetAsync(_nbaScheduleApi);
@@ -211,7 +195,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNfl()
     {
         var response = await _httpClient.GetAsync(_nflScheduleApi);
@@ -258,7 +241,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNhl()
     {
         var response = await _httpClient.GetAsync(_nhlScheduleApi);
@@ -310,7 +292,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateCfb()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, _cfbScheduleApi);
@@ -365,7 +346,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateEpg()
     {
         var games = await _context.Games

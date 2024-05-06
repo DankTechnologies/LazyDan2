@@ -5,7 +5,6 @@ using System.Text;
 using System.Xml.Linq;
 using CliWrap;
 using CliWrap.Buffered;
-using Hangfire;
 using LazyDan2.Types;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -135,7 +134,6 @@ public class StreamService
         return await GetGameStream(game.League, game.HomeTeam);
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task DownloadGame(Game game)
     {
         var swGame = new Stopwatch();

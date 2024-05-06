@@ -1,8 +1,5 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Hangfire;
-using Hangfire.Redis.StackExchange;
-using LazyDan2.Filters;
 using LazyDan2.Middleware;
 using LazyDan2.Services;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +7,6 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 var sqliteConnectionString = builder.Configuration.GetConnectionString("Sqlite");
 
 builder.Logging.ClearProviders();
@@ -19,23 +15,10 @@ builder.Logging.AddSimpleConsole(x => {
     x.IncludeScopes = false;
 });
 
-builder.Services.AddHangfire(config =>
-{
-    config.UseRedisStorage(redisConnectionString, new RedisStorageOptions
-    {
-        Prefix = "LazyDan2",
-        InvisibilityTimeout = TimeSpan.FromHours(12),
-        SucceededListSize = 1000
-    });
-});
-
 builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
 builder.Services.AddTransient<GameService>();
 builder.Services.AddTransient<StreamService>();
 builder.Services.AddSingleton<PosterService>();
-
-if (builder.Configuration.GetValue<bool>("UseHangfireServer"))
-    builder.Services.AddHangfireServer();
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -72,20 +55,6 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<ErrorLoggingMiddleware>();
 app.UseMiddleware<DenyCloudflareMiddleware>();
-
-// Hangfire
-
-app.UseHangfireDashboard("/hangfire", new DashboardOptions {
-Authorization = new [] { new HangfireAllowFilter() }
-});
-
-var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
-recurringJobManager.AddOrUpdate<GameService>("UpdateCfb", x => x.UpdateCfb(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateMlb", x => x.UpdateMlb(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNba", x => x.UpdateNba(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNfl", x => x.UpdateNfl(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNhl", x => x.UpdateNhl(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateEpg", x => x.UpdateEpg(), Cron.Daily);
 
 // Swagger
 

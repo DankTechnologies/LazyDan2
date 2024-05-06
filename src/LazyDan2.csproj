@@ -14,8 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.6.6" />
-    <PackageReference Include="Hangfire" Version="1.8.12" />
-    <PackageReference Include="Hangfire.Redis.StackExchange" Version="1.9.3" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="8.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -24,7 +22,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
