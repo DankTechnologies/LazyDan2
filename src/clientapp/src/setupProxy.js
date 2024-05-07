@@ -9,9 +9,7 @@ const context =  [
   "/simple",
   "/game",
   "/dvrmanagement",
-  "/metrics",
-  "/swagger",
-  "/hangfire"
+  "/swagger"
 ];
 
 module.exports = function(app) {

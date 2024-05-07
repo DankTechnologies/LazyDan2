@@ -26,23 +26,17 @@ public class GameService
         _cfbDataToken = configuration["CfbDataToken"];
     }
 
-    public void AddGames(IEnumerable<Game> games)
+    public async Task<Game> GetGame(int id)
     {
-        _context.Games.AddRange(games);
-        _context.SaveChanges();
+        return await GetGames()
+            .FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public Game GetGame(int id)
+    public async Task<Game> GetCurrentGameByChannel(string channel)
     {
-        return GetGames()
-            .FirstOrDefault(x => x.Id == id);
-    }
-
-    public Game GetCurrentGameByChannel(string channel)
-    {
-        return GetGames()
+        return await GetGames()
             .Where(x => x.Channel == channel && x.State == GameState.InProgress)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
     }
 
     public IQueryable<Game> GetGames()
@@ -59,7 +53,7 @@ public class GameService
             .Include(x => x.Game);
     }
 
-    public Dvr ScheduleDownload(Game game)
+    public async Task<Dvr> ScheduleDownload(Game game)
     {
         var dvr = new Dvr
         {
@@ -68,21 +62,21 @@ public class GameService
             Completed = false
         };
 
-        _context.Dvrs.Add(dvr);
-        _context.SaveChanges();
+        await _context.Dvrs.AddAsync(dvr);
+        await _context.SaveChangesAsync();
         return dvr;
     }
 
-    public void CancelDownload(Game game)
+    public async Task CancelDownload(Game game)
     {
         _context.Dvrs.Remove(game.Dvr);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public Dvr UpdateDownload(Dvr dvr)
+    public async Task<Dvr> UpdateDownload(Dvr dvr)
     {
         _context.Dvrs.Update(dvr);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return dvr;
     }
 
@@ -116,7 +110,7 @@ public class GameService
 
                 if (match == null)
                 {
-                    _context.Games.Add(new Game
+                    await _context.Games.AddAsync(new Game
                     {
                         League = League.Mlb,
                         HomeTeam = homeTeam,
@@ -176,7 +170,7 @@ public class GameService
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Nba,
                     HomeTeam = homeTeam,
@@ -222,7 +216,7 @@ public class GameService
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Nfl,
                     HomeTeam = homeTeam,
@@ -273,7 +267,7 @@ public class GameService
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Nhl,
                     HomeTeam = homeTeam,
@@ -327,7 +321,7 @@ public class GameService
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Cfb,
                     HomeTeam = homeTeam,

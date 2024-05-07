@@ -130,12 +130,14 @@ public class StreamService
 
     public async Task<(string Url, string Provider)> GetGameStream(string channel)
     {
-        var game = _gameService.GetCurrentGameByChannel(channel) ?? throw new Exception("No game found");
+        var game = await _gameService.GetCurrentGameByChannel(channel) ?? throw new Exception("No game found");
         return await GetGameStream(game.League, game.HomeTeam);
     }
 
     public async Task DownloadGame(Game game)
     {
+        _logger.LogInformation("Downloading {awayTeam} at {homeTeam}", game.AwayTeam, game.HomeTeam);
+
         var swGame = new Stopwatch();
         swGame.Start();
 
@@ -145,7 +147,7 @@ public class StreamService
             return;
 
         dvrEntry.Started = true;
-        _gameService.UpdateDownload(dvrEntry);
+        await _gameService.UpdateDownload(dvrEntry);
 
         var title = $"{game.ShortAwayTeam} at {game.ShortHomeTeam}";
         await SendPush(title, $"Recording started");
@@ -224,7 +226,7 @@ public class StreamService
                 _logger.LogError(ex, ex.Message);
             }
 
-            var g = _gameService.GetGame(game.Id);
+            var g = await _gameService.GetGame(game.Id);
             _logger.LogInformation("Game is {state}, attempt {attempt}", g.State, i);
 
             if (g.State == GameState.Final)
@@ -236,7 +238,7 @@ public class StreamService
 
         _logger.LogInformation("Game over, recording complete");
         dvrEntry.Completed = true;
-        _gameService.UpdateDownload(dvrEntry);
+        await _gameService.UpdateDownload(dvrEntry);
     }
 
     public static XDocument GetNfoFile(Game game, int attempt)

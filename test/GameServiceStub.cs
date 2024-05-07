@@ -19,7 +19,7 @@ public class GameServiceStub
     {
         var gameService = new GameService(context, httpClient, configuration);
 
-        var game = gameService.GetGame(27);
+        var game = await gameService.GetGame(27);
     }
 
     [OneTimeTearDown]

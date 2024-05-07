@@ -36,9 +36,12 @@ foreach (var type in gameStreamProviders)
 }
 
 // Coravel
+builder.Services.AddTransient<DownloadGamesJob>();
+builder.Services.AddTransient<QueueRecordingsJob>();
 builder.Services.AddTransient<UpdateEpgJob>();
 builder.Services.AddTransient<UpdateGamesJob>();
 builder.Services.AddScheduler();
+builder.Services.AddQueue();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers()
@@ -64,6 +67,11 @@ app.Services.UseScheduler(scheduler => {
         .Schedule<UpdateGamesJob>()
         .EveryMinute()
         .PreventOverlapping(nameof(UpdateGamesJob));
+
+    scheduler
+        .Schedule<QueueRecordingsJob>()
+        .EveryMinute()
+        .PreventOverlapping(nameof(QueueRecordingsJob));
 
     scheduler
         .Schedule<UpdateEpgJob>()
