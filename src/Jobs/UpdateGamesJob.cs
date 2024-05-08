@@ -19,23 +19,18 @@ public class UpdateGamesJob : IInvocable
         using var scope = _serviceProvider.CreateScope();
         var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
 
-        var updateTasks = new List<Task>
-        {
-            // SafelyUpdate(gameService.UpdateCfb),
-            SafelyUpdate(gameService.UpdateMlb),
-            SafelyUpdate(gameService.UpdateNba),
-            // SafelyUpdate(gameService.UpdateNfl),
-            SafelyUpdate(gameService.UpdateNhl)
-        };
-
-        await Task.WhenAll(updateTasks);
+        // await SafelyUpdate(gameService.UpdateCfb);
+        await SafelyUpdate(gameService.UpdateMlb);
+        await SafelyUpdate(gameService.UpdateNba);
+        // await SafelyUpdate(gameService.UpdateNfl);
+        await SafelyUpdate(gameService.UpdateNhl);
     }
 
-    private async Task SafelyUpdate(Func<Task> updateFunc)
+    private async Task SafelyUpdate(Func<Task> updateLeague)
     {
         try
         {
-            await updateFunc();
+            await updateLeague();
         }
         catch (Exception ex)
         {

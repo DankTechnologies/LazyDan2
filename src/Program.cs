@@ -66,6 +66,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Coravel
+
 app.Services.UseScheduler(scheduler => {
     scheduler
         .Schedule<UpdateGamesJob>()
