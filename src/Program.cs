@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+var environmentName = builder.Environment.EnvironmentName;
 
 var sqliteConnectionString = builder.Configuration.GetConnectionString("Sqlite");
 
@@ -17,7 +18,7 @@ builder.Logging.AddSimpleConsole(x => {
     x.IncludeScopes = false;
 });
 
-builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
+builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString), ServiceLifetime.Transient);
 builder.Services.AddTransient<GameService>();
 builder.Services.AddTransient<StreamService>();
 builder.Services.AddSingleton<PosterService>();
@@ -53,6 +54,9 @@ builder.Services.AddResponseCaching();
 
 var app = builder.Build();
 
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Starting LazyDan2 in {EnvironmentName} environment", environmentName);
+
 // SQLite
 
 using (var scope = app.Services.CreateScope())
@@ -76,7 +80,7 @@ app.Services.UseScheduler(scheduler => {
     scheduler
         .Schedule<UpdateEpgJob>()
         .Daily();
-});
+}).OnError(x => logger.LogError(x, x.Message));
 
 // Middleware
 

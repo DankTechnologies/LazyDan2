@@ -7,15 +7,18 @@ public class DownloadGamesJob : IInvocable, IInvocableWithPayload<Game>
 {
     public Game Payload { get; set; }
 
-    private readonly StreamService _streamService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public DownloadGamesJob(StreamService streamService)
+    public DownloadGamesJob(IServiceProvider serviceProvider)
     {
-        _streamService = streamService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task Invoke()
     {
-        await _streamService.DownloadGame(Payload);
+        using var scope = _serviceProvider.CreateScope();
+        var streamService = scope.ServiceProvider.GetRequiredService<StreamService>();
+
+        await streamService.DownloadGame(Payload);
     }
 }

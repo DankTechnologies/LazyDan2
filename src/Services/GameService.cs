@@ -8,7 +8,7 @@ namespace LazyDan2.Services;
 public class GameService
 {
     private readonly GameContext _context;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _cfbDataToken;
     private const string _nhlDateTimeFormat = "yyyy-MM-dd HH:mm:ss 'UTC'";
 
@@ -19,10 +19,12 @@ public class GameService
     private static readonly string _nhlScheduleApi = "https://duckduckgo.com/sports.js?q=nhl&league=nhl&type=games&o=json"; // This API doesn't seem to need a year parameter
     private static readonly string _cfbScheduleApi = $"https://api.collegefootballdata.com/games?year={CurrentYear}&division=fbs";
 
-    public GameService(GameContext context, HttpClient httpClient, IConfiguration configuration)
+    private HttpClient _httpClient => _httpClientFactory.CreateClient();
+
+    public GameService(GameContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
         _context = context;
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _cfbDataToken = configuration["CfbDataToken"];
     }
 
@@ -82,7 +84,7 @@ public class GameService
 
     public async Task UpdateMlb()
     {
-        var response = await _httpClient.GetAsync(_mlbScheduleApi);
+        using var response = await _httpClient.GetAsync(_mlbScheduleApi);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
@@ -132,7 +134,7 @@ public class GameService
 
     public async Task UpdateNba()
     {
-        var response = await _httpClient.GetAsync(_nbaScheduleApi);
+        using var response = await _httpClient.GetAsync(_nbaScheduleApi);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
@@ -191,7 +193,7 @@ public class GameService
 
     public async Task UpdateNfl()
     {
-        var response = await _httpClient.GetAsync(_nflScheduleApi);
+        using var response = await _httpClient.GetAsync(_nflScheduleApi);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
@@ -237,7 +239,7 @@ public class GameService
 
     public async Task UpdateNhl()
     {
-        var response = await _httpClient.GetAsync(_nhlScheduleApi);
+        using var response = await _httpClient.GetAsync(_nhlScheduleApi);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
@@ -292,7 +294,7 @@ public class GameService
         request.Headers.Add("Authorization", $"Bearer {_cfbDataToken}");
         request.Headers.Add("accept", "application/json");
 
-        var response = await _httpClient.SendAsync(request);
+        using var response = await _httpClient.GetAsync(_mlbScheduleApi);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 

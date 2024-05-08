@@ -5,19 +5,41 @@ namespace LazyDan2.Jobs;
 
 public class UpdateGamesJob : IInvocable
 {
-    private readonly GameService _gameService;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<UpdateGamesJob> _logger;
 
-    public UpdateGamesJob(GameService gameService)
+    public UpdateGamesJob(IServiceProvider serviceProvider, ILogger<UpdateGamesJob> logger)
     {
-        _gameService = gameService;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     public async Task Invoke()
     {
-        await _gameService.UpdateCfb();
-        await _gameService.UpdateMlb();
-        await _gameService.UpdateNba();
-        await _gameService.UpdateNfl();
-        await _gameService.UpdateNhl();
+        using var scope = _serviceProvider.CreateScope();
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+        var updateTasks = new List<Task>
+        {
+            // SafelyUpdate(gameService.UpdateCfb),
+            SafelyUpdate(gameService.UpdateMlb),
+            SafelyUpdate(gameService.UpdateNba),
+            // SafelyUpdate(gameService.UpdateNfl),
+            SafelyUpdate(gameService.UpdateNhl)
+        };
+
+        await Task.WhenAll(updateTasks);
+    }
+
+    private async Task SafelyUpdate(Func<Task> updateFunc)
+    {
+        try
+        {
+            await updateFunc();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, ex.Message);
+        }
     }
 }

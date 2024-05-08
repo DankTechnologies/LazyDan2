@@ -7,18 +7,21 @@ namespace LazyDan2.Jobs;
 
 public class QueueRecordingsJob : IInvocable
 {
-    private readonly GameService _gameService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IQueue _queue;
 
-    public QueueRecordingsJob(GameService gameService, IQueue queue)
+    public QueueRecordingsJob(IServiceProvider serviceProvider, IQueue queue)
     {
-        _gameService = gameService;
+        _serviceProvider = serviceProvider;
         _queue = queue;
     }
 
     public async Task Invoke()
     {
-        var entries = await _gameService.GetDvrEntries().ToListAsync();
+        using var scope = _serviceProvider.CreateScope();
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+        var entries = await gameService.GetDvrEntries().ToListAsync();
 
         var gamesToRecord = entries
             .Where(x => !x.Started && DateTime.UtcNow > x.Game.GameTime)
