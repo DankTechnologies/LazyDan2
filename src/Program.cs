@@ -16,6 +16,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(x => {
     x.SingleLine = true;
     x.IncludeScopes = false;
+    x.TimestampFormat = "[MM-dd HH:mm:ss] ";
 });
 
 builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
