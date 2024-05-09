@@ -30,10 +30,6 @@ Features are built around this core, highlights being
 * [SQLite](https://www.sqlite.org/index.html) for persisting the game schedule and DVR information
 * [Threadfin](https://github.com/Threadfin/Threadfin) as a Live TV (M3U / XMLTV) shim
 
-## Dependencies
-
-* Docker
-
 ## Configuration
 
 [appsettings.json](./src/appsettings.json) contains sample values that should be [overridden](https://learn.microsoft.com/en-us/dotnet/core/extensions/configuration) by `appsettings.Production.json` or runtime ENV VARs

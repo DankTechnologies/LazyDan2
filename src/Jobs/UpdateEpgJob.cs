@@ -5,17 +5,14 @@ namespace LazyDan2.Jobs;
 
 public class UpdateEpgJob : IInvocable
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    public UpdateEpgJob(IServiceProvider serviceProvider)
+    private readonly GameService _gameService;
+    public UpdateEpgJob(GameService gameService)
     {
-        _serviceProvider = serviceProvider;
+        _gameService = gameService;
     }
 
     public async Task Invoke()
     {
-        using var scope = _serviceProvider.CreateScope();
-        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-        await gameService.UpdateEpg();
+        await _gameService.UpdateEpg();
     }
 }

@@ -18,14 +18,14 @@ builder.Logging.AddSimpleConsole(x => {
     x.IncludeScopes = false;
 });
 
-builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString), ServiceLifetime.Transient);
-builder.Services.AddTransient<GameService>();
-builder.Services.AddTransient<StreamService>();
+builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
+builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<StreamService>();
 builder.Services.AddSingleton<PosterService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "lazydan", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "LazyDan2", Version = "v1" });
 });
 
 var gameStreamProviders = Assembly.GetExecutingAssembly().GetTypes()
@@ -33,14 +33,14 @@ var gameStreamProviders = Assembly.GetExecutingAssembly().GetTypes()
 
 foreach (var type in gameStreamProviders)
 {
-    builder.Services.AddTransient(typeof(IGameStreamProvider), type);
+    builder.Services.AddScoped(typeof(IGameStreamProvider), type);
 }
 
 // Coravel
-builder.Services.AddTransient<DownloadGamesJob>();
-builder.Services.AddTransient<QueueRecordingsJob>();
-builder.Services.AddTransient<UpdateEpgJob>();
-builder.Services.AddTransient<UpdateGamesJob>();
+builder.Services.AddScoped<DownloadGamesJob>();
+builder.Services.AddScoped<QueueRecordingsJob>();
+builder.Services.AddScoped<UpdateEpgJob>();
+builder.Services.AddScoped<UpdateGamesJob>();
 builder.Services.AddScheduler();
 builder.Services.AddQueue();
 
@@ -70,7 +70,7 @@ using (var scope = app.Services.CreateScope())
 app.Services.UseScheduler(scheduler => {
     scheduler
         .Schedule<UpdateGamesJob>()
-        .EveryMinute()
+        .EveryFiveMinutes()
         .PreventOverlapping(nameof(UpdateGamesJob));
 
     scheduler
@@ -93,7 +93,7 @@ app.UseMiddleware<DenyCloudflareMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LazyDan V1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LazyDan2");
 });
 
 // Other HTTP stuff
