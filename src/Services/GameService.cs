@@ -1,9 +1,7 @@
 using System.Globalization;
-using Hangfire;
+using System.Text.Json;
 using LazyDan2.Types;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Newtonsoft.Json.Linq;
 
 namespace LazyDan2.Services;
 
@@ -11,8 +9,6 @@ public class GameService
 {
     private readonly GameContext _context;
     private readonly HttpClient _httpClient;
-    private readonly IBackgroundJobClient _backgroundJobClient;
-    private readonly IMemoryCache _memoryCache;
     private readonly string _cfbDataToken;
     private const string _nhlDateTimeFormat = "yyyy-MM-dd HH:mm:ss 'UTC'";
 
@@ -23,32 +19,24 @@ public class GameService
     private static readonly string _nhlScheduleApi = "https://duckduckgo.com/sports.js?q=nhl&league=nhl&type=games&o=json"; // This API doesn't seem to need a year parameter
     private static readonly string _cfbScheduleApi = $"https://api.collegefootballdata.com/games?year={CurrentYear}&division=fbs";
 
-    public GameService(GameContext context, HttpClient httpClient, IBackgroundJobClient backgroundJobClient, IMemoryCache memoryCache, IConfiguration configuration)
+    public GameService(GameContext context, HttpClient httpClient, IConfiguration configuration)
     {
         _context = context;
         _httpClient = httpClient;
-        _backgroundJobClient = backgroundJobClient;
-        _memoryCache = memoryCache;
         _cfbDataToken = configuration["CfbDataToken"];
     }
 
-    public void AddGames(IEnumerable<Game> games)
+    public async Task<Game> GetGame(int id)
     {
-        _context.Games.AddRange(games);
-        _context.SaveChanges();
+        return await GetGames()
+            .FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public Game GetGame(int id)
+    public async Task<Game> GetCurrentGameByChannel(string channel)
     {
-        return GetGames()
-            .FirstOrDefault(x => x.Id == id);
-    }
-
-    public Game GetCurrentGameByChannel(string channel)
-    {
-        return GetGames()
+        return await GetGames()
             .Where(x => x.Channel == channel && x.State == GameState.InProgress)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
     }
 
     public IQueryable<Game> GetGames()
@@ -65,11 +53,8 @@ public class GameService
             .Include(x => x.Game);
     }
 
-    public Dvr ScheduleDownload(Game game)
+    public async Task<Dvr> ScheduleDownload(Game game)
     {
-        var jobId = _backgroundJobClient.Schedule<StreamService>(x => x.DownloadGame(game), DateTime.SpecifyKind(game.GameTime, DateTimeKind.Utc));
-        _memoryCache.Set(game.Id, jobId);
-
         var dvr = new Dvr
         {
             GameId = game.Id,
@@ -77,61 +62,57 @@ public class GameService
             Completed = false
         };
 
-        _context.Dvrs.Add(dvr);
-        _context.SaveChanges();
+        await _context.Dvrs.AddAsync(dvr);
+        await _context.SaveChangesAsync();
         return dvr;
     }
 
-    public void CancelDownload(Game game)
+    public async Task CancelDownload(Game game)
     {
-        if (_memoryCache.TryGetValue(game.Id, out string jobId))
-        {
-            _backgroundJobClient.Delete(jobId);
-        }
-
         _context.Dvrs.Remove(game.Dvr);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public Dvr UpdateDownload(Dvr dvr)
+    public async Task<Dvr> UpdateDownload(Dvr dvr)
     {
         _context.Dvrs.Update(dvr);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return dvr;
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateMlb()
     {
-        var response = await _httpClient.GetAsync(_mlbScheduleApi);
+        using var response = await _httpClient.GetAsync(_mlbScheduleApi);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
 
-        var obj = JObject.Parse(json);
-        var dates = (JArray)obj["dates"];
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var jsonDoc = await JsonDocument.ParseAsync(stream);
 
-        foreach (var date in dates)
+        var root = jsonDoc.RootElement;
+        var datesArray = root.GetProperty("dates");
+
+        foreach (var date in datesArray.EnumerateArray())
         {
-            var gameArray = (JArray)date["games"];
-            foreach (var game in gameArray)
+            var gamesArray = date.GetProperty("games");
+            foreach (var game in gamesArray.EnumerateArray())
             {
-                var homeTeam = (string)game["teams"]["home"]["team"]["name"];
-                var awayTeam = (string)game["teams"]["away"]["team"]["name"];
-                var gameTime = DateTime.Parse((string)game["gameDate"], null, DateTimeStyles.AssumeUniversal);
-                var gameType = (string)game["gameType"];
-                var startTimeTbd = (bool)game["status"]["startTimeTBD"];
-                var state = (string)game["status"]["detailedState"];
+                var homeTeam = game.GetProperty("teams").GetProperty("home").GetProperty("team").GetProperty("name").GetString();
+                var awayTeam = game.GetProperty("teams").GetProperty("away").GetProperty("team").GetProperty("name").GetString();
+                var gameTime = DateTime.Parse(game.GetProperty("gameDate").GetString(), null, DateTimeStyles.AssumeUniversal);
+                var gameType = game.GetProperty("gameType").GetString();
+                var startTimeTbd = game.GetProperty("status").GetProperty("startTimeTBD").GetBoolean();
+                var state = game.GetProperty("status").GetProperty("detailedState").GetString();
 
                 if (gameTime < DateTime.UtcNow.AddDays(-1) || startTimeTbd || gameType == "PR")
                 {
                     continue;
                 }
 
-                var match = _context.Games.SingleOrDefault(g => g.League == League.Mlb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+                var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Mlb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
                 if (match == null)
                 {
-                    _context.Games.Add(new Game
+                    await _context.Games.AddAsync(new Game
                     {
                         League = League.Mlb,
                         HomeTeam = homeTeam,
@@ -151,95 +132,100 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNba()
     {
-        var response = await _httpClient.GetAsync(_nbaScheduleApi);
+        using var response = await _httpClient.GetAsync(_nbaScheduleApi);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
 
-        var obj = JObject.Parse(json);
-        var games = obj["leagueSchedule"]["gameDates"]
-            .SelectMany(gd => gd["games"])
-            .ToList();
+        // Stream the JSON content directly from the response
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var jsonDoc = await JsonDocument.ParseAsync(stream, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
 
-        foreach (var game in games)
+        var root = jsonDoc.RootElement;
+        var gameDatesArray = root.GetProperty("leagueSchedule").GetProperty("gameDates");
+
+        foreach (var gameDate in gameDatesArray.EnumerateArray())
         {
-            var gameTime = DateTime.Parse((string)game["gameDateTimeUTC"], null, DateTimeStyles.AssumeUniversal);
+            var gamesArray = gameDate.GetProperty("games");
+            foreach (var game in gamesArray.EnumerateArray())
+            {
+                var gameTime = DateTime.Parse(game.GetProperty("gameDateTimeUTC").GetString(), null, DateTimeStyles.AssumeUniversal);
 
-            var homeCity = (string)game["homeTeam"]["teamCity"];
-            var homeName = (string)game["homeTeam"]["teamName"];
-            var awayCity = (string)game["awayTeam"]["teamCity"];
-            var awayName = (string)game["awayTeam"]["teamName"];
+                var homeCity = game.GetProperty("homeTeam").GetProperty("teamCity").GetString();
+                var homeName = game.GetProperty("homeTeam").GetProperty("teamName").GetString();
+                var awayCity = game.GetProperty("awayTeam").GetProperty("teamCity").GetString();
+                var awayName = game.GetProperty("awayTeam").GetProperty("teamName").GetString();
 
-            var homeTeam =  $"{homeCity} {homeName}";
-            var awayTeam =  $"{awayCity} {awayName}";
+                var homeTeam = $"{homeCity} {homeName}";
+                var awayTeam = $"{awayCity} {awayName}";
 
-            var status = (int)game["gameStatus"];
+                var status = game.GetProperty("gameStatus").GetInt32();
 
-            var state = status == 3
+                var state = status == 3
                 ? GameState.Final
                 : status == 2
                     ? GameState.InProgress
                     : "Scheduled";
 
-            if (gameTime < DateTime.UtcNow.AddDays(-1))
-            {
-                continue;
-            }
-
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nba && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
-
-            if (match == null)
-            {
-                _context.Games.Add(new Game
+                if (gameTime < DateTime.UtcNow.AddDays(-1))
                 {
-                    League = League.Nba,
-                    HomeTeam = homeTeam,
-                    AwayTeam = awayTeam,
-                    GameTime = gameTime,
-                    State = state
-                });
-            }
-            else
-            {
-                match.State = state;
-                _context.Games.Update(match);
+                    continue;
+                }
+
+                var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nba && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+
+                if (match == null)
+                {
+                    await _context.Games.AddAsync(new Game
+                    {
+                        League = League.Nba,
+                        HomeTeam = homeTeam,
+                        AwayTeam = awayTeam,
+                        GameTime = gameTime,
+                        State = state
+                    });
+                }
+                else
+                {
+                    match.State = state;
+                    _context.Games.Update(match);
+                }
             }
         }
 
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNfl()
     {
-        var response = await _httpClient.GetAsync(_nflScheduleApi);
+        using var response = await _httpClient.GetAsync(_nflScheduleApi);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
 
-        var obj = JObject.Parse(json);
-        var events = (JArray)obj["events"];
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var jsonDoc = await JsonDocument.ParseAsync(stream);
 
-        foreach (var game in events)
+        var root = jsonDoc.RootElement;
+        var events = root.GetProperty("events");
+
+        foreach (var game in events.EnumerateArray())
         {
-            var teams = ((string)game["name"]).Split(" at ");
+            var teams = game.GetProperty("name").GetString().Split(" at ");
             var awayTeam = teams[0];
             var homeTeam = teams[1];
-            var gameTime = DateTime.Parse((string)game["date"], null, DateTimeStyles.AssumeUniversal);
-            var state = (string)game["status"]["type"]["description"];
+            var gameTime = DateTime.Parse(game.GetProperty("name").GetString(), null, DateTimeStyles.AssumeUniversal);
+            var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
-            // if (gameTime < DateTime.UtcNow.AddDays(-1) || (string)game["season"]["slug"] == "preseason")
+
             if (gameTime < DateTime.UtcNow.AddDays(-1))
             {
                 continue;
             }
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nfl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nfl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Nfl,
                     HomeTeam = homeTeam,
@@ -258,23 +244,26 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateNhl()
     {
-        var response = await _httpClient.GetAsync(_nhlScheduleApi);
+        using var response = await _httpClient.GetAsync(_nhlScheduleApi);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
 
-        var obj = JObject.Parse(json);
-        var games = (JArray)obj["data"]["games"];
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var jsonDoc = await JsonDocument.ParseAsync(stream, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
 
-        foreach (var game in games)
+        var root = jsonDoc.RootElement;
+        var gamesArray = root.GetProperty("data").GetProperty("games");
+
+        foreach (var game in gamesArray.EnumerateArray())
         {
-            var homeTeam = (string)game["home_team"]["location"] + " " + (string)game["home_team"]["name"];
-            var awayTeam = (string)game["away_team"]["location"] + " " + (string)game["away_team"]["name"];
+            var homeTeam = game.GetProperty("home_team").GetProperty("location").GetString() + " " +
+                              game.GetProperty("home_team").GetProperty("name").GetString();
+            var awayTeam = game.GetProperty("away_team").GetProperty("location").GetString() + " " +
+                              game.GetProperty("away_team").GetProperty("name").GetString();
 
-            var gameTime = DateTimeOffset.ParseExact((string)game["start_time"], _nhlDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).UtcDateTime;
-            var state = (string)game["status"];
+            var gameTime = DateTimeOffset.ParseExact(game.GetProperty("start_time").GetString(), _nhlDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).UtcDateTime;
+            var state = game.GetProperty("status").GetString();
 
             state = state == "closed" || state == "complete"
                 ? GameState.Final
@@ -287,11 +276,11 @@ public class GameService
                 continue;
             }
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Nhl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Nhl && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Nhl,
                     HomeTeam = homeTeam,
@@ -310,26 +299,25 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateCfb()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, _cfbScheduleApi);
         request.Headers.Add("Authorization", $"Bearer {_cfbDataToken}");
         request.Headers.Add("accept", "application/json");
 
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
+        using var response = await _httpClient.GetAsync(_mlbScheduleApi);
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var jsonDoc = await JsonDocument.ParseAsync(stream);
 
-        var games = JArray.Parse(json);
+        var gamesArray = jsonDoc.RootElement.GetProperty("games").EnumerateArray();
 
-        foreach (var game in games)
+        foreach (var game in gamesArray)
         {
-            var homeTeam = (string)game["home_team"];
-            var awayTeam = (string)game["away_team"];
-            var gameTime = DateTime.Parse((string)game["start_date"], null, DateTimeStyles.AssumeUniversal);
-            var startTimeTbd = (bool)game["start_time_tbd"];
-            var completed = (bool)game["completed"];
+            var homeTeam = game.GetProperty("home_team").GetString();
+            var awayTeam = game.GetProperty("away_team").GetString();
+            var gameTime = DateTime.Parse(game.GetProperty("start_date").GetString(), null, DateTimeStyles.AssumeUniversal);
+            var startTimeTbd = game.GetProperty("start_time_tbd").GetBoolean();
+            var completed = game.GetProperty("completed").GetBoolean();
 
             if (gameTime < DateTime.Now.AddDays(-1) || startTimeTbd)
             {
@@ -342,11 +330,11 @@ public class GameService
                     ? GameState.InProgress
                     : "Scheduled";
 
-            var match = _context.Games.SingleOrDefault(g => g.League == League.Cfb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
+            var match = await _context.Games.SingleOrDefaultAsync(g => g.League == League.Cfb && g.HomeTeam == homeTeam && g.AwayTeam == awayTeam && g.GameTime == gameTime);
 
             if (match == null)
             {
-                _context.Games.Add(new Game
+                await _context.Games.AddAsync(new Game
                 {
                     League = League.Cfb,
                     HomeTeam = homeTeam,
@@ -365,7 +353,6 @@ public class GameService
         await _context.SaveChangesAsync();
     }
 
-    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
     public async Task UpdateEpg()
     {
         var games = await _context.Games

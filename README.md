@@ -7,7 +7,7 @@
 Features are built around this core, highlights being
 
 * Simple website with schedules and video player
-* Hangfire background jobs to update schedules and download games (DVR)
+* DVR feature to schedule game downloads
 * SQLite DB to store game and DVR information
 
 ![desktop](.images/desktop.png "Desktop")
@@ -23,18 +23,12 @@ Features are built around this core, highlights being
 ### Server-side
 
 * .NET 8
-* [Hangfire](https://www.hangfire.io/) is used to handle recurring jobs and the DVR scheduling
-* [Redis](https://redis.io/) is used as the Hangfire backing store, with help from [Hangfire.Redis.StackExchange](https://github.com/marcoCasamento/Hangfire.Redis.StackExchange)
+* [Coravel](https://docs.coravel.net/) is used to handle recurring jobs and the DVR queueing
 * [CliWrap](https://github.com/Tyrrrz/CliWrap) is used to shell out to `streamlink`
 * [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) is used to create game posters with the teams' logos
 * [streamlink](https://streamlink.github.io/) for downloading games
 * [SQLite](https://www.sqlite.org/index.html) for persisting the game schedule and DVR information
 * [Threadfin](https://github.com/Threadfin/Threadfin) as a Live TV (M3U / XMLTV) shim
-
-## Dependencies
-
-* Docker
-* Redis
 
 ## Configuration
 
@@ -45,7 +39,6 @@ Features are built around this core, highlights being
 * `LazyDanUrl` = domain where website is being hosted
 * `DownloadPath` = directory used by DVR for game downloads
 * `CfbDataToken` = Bearer token for `api.collegefootballdata.com` calls when updating CFB schedule
-* `ConnectionStrings__Redis` = redis connection string
 * `ConnectionStrings__Sqlite` = SQLite connection string.  The DB is created if not found at the specified path
 
 ### Optional
@@ -57,7 +50,7 @@ Features are built around this core, highlights being
 
 ## Docker Notes
 
-1. The .NET app listens to port 8080 inside the container, to serve up the Hangfire dashboard.  Add a port mapping to a host port if you care about this, otherwise skip.
+1. The .NET app listens to port 8080 inside the container, to serve the website and APIs.  Add a port mapping to a host port if you care about this, otherwise skip.
 2. Set `DownloadPath` and `ConnectionStrings__Sqlite` (data source path) to container paths, and use volumes to mount the target directories.  For instance, I use `/data/tv` and `/data/lazydan2` as the container paths, with `/mnt/user/tv` and `/mnt/user/documents/lazydan2` as the host paths
 
 ```yaml
@@ -77,12 +70,6 @@ Features are built around this core, highlights being
           - "/mnt/user/documents/lazydan2:/data/lazydan2"
           - "/mnt/user/tv:/data/tv"
 ```
-
-## Hangfire Dashboard
-
-It is served at `/hangfire` on whatever port is mapped to the host
-
-![Hangfire Dashboard](.images/hangfire.png)
 
 ## Logs
 

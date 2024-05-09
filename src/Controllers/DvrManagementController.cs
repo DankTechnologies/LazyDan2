@@ -20,9 +20,9 @@ public class DvrManagementController : ControllerBase
 
     [HttpPost]
     [Route("schedule/{id}")]
-    public IActionResult ScheduleDownload(int id)
+    public async Task<IActionResult> ScheduleDownload(int id)
     {
-        var game = _gameService.GetGame(id);
+        var game = await _gameService.GetGame(id);
 
         if (game == null)
             return NotFound();
@@ -30,20 +30,20 @@ public class DvrManagementController : ControllerBase
         if (game.Dvr != null)
             return BadRequest("Game already scheduled for download");
 
-        _gameService.ScheduleDownload(game);
+        await _gameService.ScheduleDownload(game);
         return Ok();
     }
 
     [HttpDelete]
     [Route("cancel/{id}")]
-    public IActionResult CancelDownload(int id)
+    public async Task<IActionResult> CancelDownload(int id)
     {
-        var game = _gameService.GetGame(id);
+        var game = await _gameService.GetGame(id);
 
         if (game == null)
             return NotFound();
 
-        _gameService.CancelDownload(game);
+        await _gameService.CancelDownload(game);
         return Ok();
     }
 
@@ -51,7 +51,6 @@ public class DvrManagementController : ControllerBase
     public IActionResult GetDvrEntries()
     {
         var ret = _gameService.GetDvrEntries()
-            .Include(x => x.Game)
             .ToList();
 
         return Ok(ret);

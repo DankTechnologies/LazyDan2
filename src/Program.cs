@@ -1,16 +1,15 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Hangfire;
-using Hangfire.Redis.StackExchange;
-using LazyDan2.Filters;
+using Coravel;
+using LazyDan2.Jobs;
 using LazyDan2.Middleware;
 using LazyDan2.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+var environmentName = builder.Environment.EnvironmentName;
 
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 var sqliteConnectionString = builder.Configuration.GetConnectionString("Sqlite");
 
 builder.Logging.ClearProviders();
@@ -19,27 +18,14 @@ builder.Logging.AddSimpleConsole(x => {
     x.IncludeScopes = false;
 });
 
-builder.Services.AddHangfire(config =>
-{
-    config.UseRedisStorage(redisConnectionString, new RedisStorageOptions
-    {
-        Prefix = "LazyDan2",
-        InvisibilityTimeout = TimeSpan.FromHours(12),
-        SucceededListSize = 1000
-    });
-});
-
 builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
-builder.Services.AddTransient<GameService>();
-builder.Services.AddTransient<StreamService>();
+builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<StreamService>();
 builder.Services.AddSingleton<PosterService>();
-
-if (builder.Configuration.GetValue<bool>("UseHangfireServer"))
-    builder.Services.AddHangfireServer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "lazydan", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "LazyDan2", Version = "v1" });
 });
 
 var gameStreamProviders = Assembly.GetExecutingAssembly().GetTypes()
@@ -47,8 +33,16 @@ var gameStreamProviders = Assembly.GetExecutingAssembly().GetTypes()
 
 foreach (var type in gameStreamProviders)
 {
-    builder.Services.AddTransient(typeof(IGameStreamProvider), type);
+    builder.Services.AddScoped(typeof(IGameStreamProvider), type);
 }
+
+// Coravel
+builder.Services.AddScoped<DownloadGamesJob>();
+builder.Services.AddScoped<QueueRecordingsJob>();
+builder.Services.AddScoped<UpdateEpgJob>();
+builder.Services.AddScoped<UpdateGamesJob>();
+builder.Services.AddScheduler();
+builder.Services.AddQueue();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers()
@@ -60,6 +54,9 @@ builder.Services.AddResponseCaching();
 
 var app = builder.Build();
 
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Starting LazyDan2 in {EnvironmentName} environment", environmentName);
+
 // SQLite
 
 using (var scope = app.Services.CreateScope())
@@ -68,31 +65,35 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 }
 
+// Coravel
+
+app.Services.UseScheduler(scheduler => {
+    scheduler
+        .Schedule<UpdateGamesJob>()
+        .EveryFiveMinutes()
+        .PreventOverlapping(nameof(UpdateGamesJob));
+
+    scheduler
+        .Schedule<QueueRecordingsJob>()
+        .EveryMinute()
+        .PreventOverlapping(nameof(QueueRecordingsJob));
+
+    scheduler
+        .Schedule<UpdateEpgJob>()
+        .Daily();
+}).OnError(x => logger.LogError(x, x.Message));
+
 // Middleware
 
 app.UseMiddleware<ErrorLoggingMiddleware>();
 app.UseMiddleware<DenyCloudflareMiddleware>();
-
-// Hangfire
-
-app.UseHangfireDashboard("/hangfire", new DashboardOptions {
-Authorization = new [] { new HangfireAllowFilter() }
-});
-
-var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
-recurringJobManager.AddOrUpdate<GameService>("UpdateCfb", x => x.UpdateCfb(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateMlb", x => x.UpdateMlb(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNba", x => x.UpdateNba(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNfl", x => x.UpdateNfl(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateNhl", x => x.UpdateNhl(), Cron.Minutely);
-recurringJobManager.AddOrUpdate<GameService>("UpdateEpg", x => x.UpdateEpg(), Cron.Daily);
 
 // Swagger
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LazyDan V1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LazyDan2");
 });
 
 // Other HTTP stuff

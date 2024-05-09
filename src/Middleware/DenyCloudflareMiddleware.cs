@@ -3,7 +3,7 @@ using System.Net;
 public class DenyCloudflareMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly List<string> _paths = new() { "/swagger", "/hangfire", "/dvrmanagement" };
+    private static readonly List<string> _paths = new() { "/swagger", "/dvrmanagement" };
 
     public DenyCloudflareMiddleware(RequestDelegate next)
     {
