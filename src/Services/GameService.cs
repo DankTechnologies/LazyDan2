@@ -96,14 +96,20 @@ public class GameService
             var gamesArray = date.GetProperty("games");
             foreach (var game in gamesArray.EnumerateArray())
             {
-                var homeTeam = game.GetProperty("teams").GetProperty("home").GetProperty("team").GetProperty("name").GetString();
-                var awayTeam = game.GetProperty("teams").GetProperty("away").GetProperty("team").GetProperty("name").GetString();
+                var homeTeam = game.GetProperty("teams").GetProperty("home").GetProperty("team").GetProperty("name").GetString().Trim();
+                var awayTeam = game.GetProperty("teams").GetProperty("away").GetProperty("team").GetProperty("name").GetString().Trim();
                 var gameTime = DateTime.Parse(game.GetProperty("gameDate").GetString(), null, DateTimeStyles.AssumeUniversal);
                 var gameType = game.GetProperty("gameType").GetString();
                 var startTimeTbd = game.GetProperty("status").GetProperty("startTimeTBD").GetBoolean();
                 var state = game.GetProperty("status").GetProperty("detailedState").GetString();
 
-                if (gameTime < DateTime.UtcNow.AddDays(-1) || startTimeTbd || gameType == "PR")
+                if (
+                    gameTime < DateTime.UtcNow.AddDays(-1) ||
+                    startTimeTbd ||
+                    gameType == "PR" ||
+                    string.IsNullOrWhiteSpace(homeTeam) ||
+                    string.IsNullOrWhiteSpace(awayTeam)
+                )
                 {
                     continue;
                 }
@@ -156,8 +162,8 @@ public class GameService
                 var awayCity = game.GetProperty("awayTeam").GetProperty("teamCity").GetString();
                 var awayName = game.GetProperty("awayTeam").GetProperty("teamName").GetString();
 
-                var homeTeam = $"{homeCity} {homeName}";
-                var awayTeam = $"{awayCity} {awayName}";
+                var homeTeam = $"{homeCity} {homeName}".Trim();
+                var awayTeam = $"{awayCity} {awayName}".Trim();
 
                 var status = game.GetProperty("gameStatus").GetInt32();
 
@@ -167,7 +173,11 @@ public class GameService
                     ? GameState.InProgress
                     : "Scheduled";
 
-                if (gameTime < DateTime.UtcNow.AddDays(-1))
+                if (
+                    gameTime < DateTime.UtcNow.AddDays(-1) ||
+                    string.IsNullOrWhiteSpace(homeTeam) ||
+                    string.IsNullOrWhiteSpace(awayTeam)
+                )
                 {
                     continue;
                 }
