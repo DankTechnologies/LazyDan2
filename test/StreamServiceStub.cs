@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Reflection;
 using LazyDan2.Services;
 using LazyDan2.Types;
@@ -18,24 +17,6 @@ public class StreamServiceStub
     private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
     private readonly string lazyDanUrl = "https://lazy.pitpat.me";
-
-    [Test]
-    public async Task GetNfoXml()
-    {
-        var game = new Game
-        {
-            AwayTeam = "Chicago Cubs",
-            HomeTeam = "St. Louis Cardinals",
-            GameTime = DateTime.Now,
-            League = "MLB"
-        };
-
-        var attempt = 1;
-
-        var nfoXml = StreamService.GetNfoFile(game, attempt);
-
-        Debug.WriteLine(nfoXml.ToString());
-    }
 
     [Test]
     public async Task GetGameStreamStub()
