@@ -2,10 +2,10 @@ namespace LazyDan2.Services;
 
 using System.Diagnostics;
 using System.Text;
-using System.Xml.Linq;
 using CliWrap;
 using CliWrap.Buffered;
 using LazyDan2.Types;
+using LazyDan2.Utils;
 using Microsoft.Extensions.Caching.Memory;
 
 public class StreamService
@@ -200,14 +200,6 @@ public class StreamService
 
                 _logger.LogInformation("{provider} stream exited with code {exitCode} after {duration} minutes, attempt {attempt}", stream.Provider, exitCode, elapsedMin, i);
 
-                var nfoXml = GetNfoFile(game, i);
-                nfoXml.Save(nfoPath);
-
-                var posterBytes = _posterService.CombineLogos(game.League, game.HomeTeam, game.AwayTeam);
-
-                if (posterBytes != null)
-                    File.WriteAllBytes(posterPath, posterBytes);
-
                 var log = new StringBuilder();
                 log.AppendLine($"Exit Code: {exitCode}");
                 log.AppendLine($"Stream Provider: {stream.Provider}");
@@ -217,9 +209,36 @@ public class StreamService
                 log.AppendLine($"Std Err: {stdErr}");
                 File.WriteAllText(logPath, log.ToString());
 
-                await SendWebhooks();
+                if (!File.Exists(outputPath))
+                {
+                    Thread.Sleep(30 * 1000);
+                    continue;
+                }
 
-                Thread.Sleep(5000);
+                // some ts files have errors that lead to a ~26 hour duration, which screws up seeking
+                // having ffmpeg remux the file usually fixes the duration
+                var duration = await StreamUtils.GetDuration(outputPath);
+                if (duration > 86400)
+                {
+                    _logger.LogInformation("File {outputPath} has an abnormal duration of {duration} seconds, remuxing...", outputPath, duration);
+
+                    // ffmpeg throws error if the file extension isn't a video container format
+                    var tempPath = Path.GetTempFileName() + ".ts";
+
+                    await StreamUtils.RemuxFile(outputPath, tempPath);
+                    File.Delete(outputPath);
+                    File.Move(tempPath, outputPath);
+                }
+
+                var nfoXml = StreamUtils.GetNfoFile(game, i);
+                nfoXml.Save(nfoPath);
+
+                var posterBytes = _posterService.CombineLogos(game.League, game.HomeTeam, game.AwayTeam);
+
+                if (posterBytes != null)
+                    File.WriteAllBytes(posterPath, posterBytes);
+
+                await SendWebhooks();
             }
             catch (Exception ex)
             {
@@ -239,24 +258,6 @@ public class StreamService
         _logger.LogInformation("Game over, recording complete");
         dvrEntry.Completed = true;
         await _gameService.UpdateDownload(dvrEntry);
-    }
-
-    public static XDocument GetNfoFile(Game game, int attempt)
-    {
-        var title = $"{game.GameTime:MM-dd}-{game.ShortAwayTeam}-{game.ShortHomeTeam}-{attempt:00}";
-        var plot = $"{game.AwayTeam} at {game.HomeTeam} on {game.GameTime:yyyy-MM-dd} ({attempt:00})";
-
-        return new XDocument(
-            new XElement("episodedetails",
-                new XElement("title", title),
-                new XElement("showtitle", game.League),
-                new XElement("plot", plot),
-                new XElement("genre", "Sport"),
-                new XElement("aired", game.GameTime.ToString("yyyy-MM-dd")),
-                new XElement("season", game.GameTime.ToString("yyyy-MM-dd")),
-                new XElement("episode", $"{attempt:00}")
-            )
-        );
     }
 
     public async Task SendPush(string title, string message)
