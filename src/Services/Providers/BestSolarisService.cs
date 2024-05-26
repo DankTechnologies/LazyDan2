@@ -51,7 +51,7 @@ public class BestSolarisService : IGameStreamProvider
 
         team = team.ToLower().Replace(" ", "-").Replace(".", string.Empty);
 
-        var match = Regex.Match(response, $@"<a href=""({_homeUrl}\/{league}streams\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
+        var match = Regex.Match(response, $@"<a.*href=""({_homeUrl}\/{league}streams\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))

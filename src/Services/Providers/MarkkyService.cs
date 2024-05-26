@@ -7,7 +7,7 @@ public class MarkkyService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "Markky";
 
-    private const string _homeUrl = "https://markkystreams.com";
+    private const string _homeUrl = "https://v.markkystreams.com";
 
     private readonly HttpClient _httpClient;
 
@@ -32,17 +32,17 @@ public class MarkkyService : IGameStreamProvider
 
     public async Task<string> GetNbaStream(string team)
     {
-        return await GetGameStream(team, "nba-streams");
+        return await GetGameStream(team, "video-category/nba-streams");
     }
 
     public async Task<string> GetNflStream(string team)
     {
-        return await GetGameStream(team, "nfl-streams");
+        return await GetGameStream(team, "video-category/nfl-streams");
     }
 
     public async Task<string> GetNhlStream(string team)
     {
-        return await GetGameStream(team, "nhl-streams");
+        return await GetGameStream(team, "video-category/nhl-streams");
     }
 
     private async Task<string> GetGameStream(string team, string league)

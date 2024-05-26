@@ -72,7 +72,7 @@ public class OneStreamService : IGameStreamProvider
 
         team = team.ToLower().Replace(" ", "-").Replace(".", string.Empty);
 
-        var match = Regex.Match(response, $@"<a href=""(https:\/\/1stream\.eu\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
+        var match = Regex.Match(response, $@"<a.*href=""({_homeUrl}\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))
