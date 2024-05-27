@@ -61,39 +61,7 @@ public class StreamService
 
         var providerTasks = _providers
             .Where(x => x.IsEnabled)
-            .Select(async provider =>
-            {
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-
-                try
-                {
-
-                    _logger.LogInformation("Getting stream from {provider} for {league} {team}", provider.Name, league, team);
-
-                    var urlTask = GetStreamFromProvider(provider, league, team);
-
-                    var completedTask = Task.WhenAny(urlTask, timeoutTask);
-
-                    if (completedTask == timeoutTask)
-                    {
-                        _logger.LogInformation("Timed out getting stream from {provider} for {league} {team}", provider.Name, league, team);
-                        return (Url: null, Provider: provider.Name);
-                    }
-
-                    var url = await urlTask;
-                    await SanityTestStream(url);
-
-                    _logger.LogInformation("Successful getting stream from {provider} for {league} {team}", provider.Name, league, team);
-
-                    return (Url: url, Provider: provider.Name);
-                }
-                catch (Exception exc)
-                {
-                    _logger.LogError(exc, "Error getting stream from {Provider} for {League} {Team}", provider.Name, league, team);
-                    return (Url: null, Provider: provider.Name);
-                }
-            })
-            .ToList();
+            .Select(provider => GetStreamWithTimeout(provider, league, team));
 
         var results = await Task.WhenAll(providerTasks);
 
@@ -101,7 +69,7 @@ public class StreamService
             .Where(x => x.Url != null)
             .ToList();
 
-        if (!validResults.Any())
+        if (validResults.Count == 0)
         {
             throw new Exception($"No stream found for {league} {team}");
         }
@@ -109,6 +77,42 @@ public class StreamService
         _logger.LogInformation("Found {count} valid streams for {league} {team}", validResults.Count, league, team);
         _logger.LogInformation("Valid streams: {streams}", string.Join(", ", validResults.Select(x => x.Provider)));
 
+        return SelectRandomStream(validResults, league, team);
+    }
+
+    private async Task<(string Url, string Provider)> GetStreamWithTimeout(IGameStreamProvider provider, string league, string team)
+    {
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            _logger.LogInformation("Getting stream from {provider} for {league} {team}", provider.Name, league, team);
+
+            var urlTask = GetStreamFromProvider(provider, league, team);
+            var completedTask = await Task.WhenAny(urlTask, timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                _logger.LogInformation("Timed out getting stream from {provider} for {league} {team}", provider.Name, league, team);
+                return (Url: null, Provider: provider.Name);
+            }
+
+            var url = await urlTask;
+            await SanityTestStream(url);
+
+            _logger.LogInformation("Successful getting stream from {provider} for {league} {team}", provider.Name, league, team);
+
+            return (Url: url, Provider: provider.Name);
+        }
+        catch (Exception exc)
+        {
+            _logger.LogError(exc, "Error getting stream from {Provider} for {League} {Team}", provider.Name, league, team);
+            return (Url: null, Provider: provider.Name);
+        }
+    }
+
+    private (string Url, string Provider) SelectRandomStream(List<(string Url, string Provider)> validResults, string league, string team)
+    {
         var totalWeight = validResults
             .Sum(result => _providers.First(x => x.Name == result.Provider).Weight);
 
