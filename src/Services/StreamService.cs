@@ -6,12 +6,10 @@ using CliWrap;
 using CliWrap.Buffered;
 using LazyDan2.Types;
 using LazyDan2.Utils;
-using Microsoft.Extensions.Caching.Memory;
 
 public class StreamService
 {
     private readonly ILogger<StreamService> _logger;
-    private readonly IMemoryCache _cache;
     private readonly GameService _gameService;
     private readonly PosterService _posterService;
     private readonly IEnumerable<IGameStreamProvider> _providers;
@@ -24,17 +22,16 @@ public class StreamService
     private readonly string _plexAccessToken;
     private readonly string _jellyfinAccessToken;
     private readonly string _jellyfinUrl;
-    private const int _attemptCutover = int.MaxValue;    // when to switch to backups, TODO: re-evaluate
+    private const int _maxAttempts = 100;
     private const int _gameHoursMin = 2;
     private const string _streamlinkArgs =
         "-f " +
         "--hls-live-edge 12 " +
         "--retry-open 5 " +
         "--ringbuffer-size 256M ";
-    public StreamService(ILogger<StreamService> logger, IMemoryCache cache, IEnumerable<IGameStreamProvider> providers, IConfiguration configuration, GameService gameService, HttpClient client, PosterService posterService)
+    public StreamService(ILogger<StreamService> logger, IEnumerable<IGameStreamProvider> providers, IConfiguration configuration, GameService gameService, HttpClient client, PosterService posterService)
     {
         _logger = logger;
-        _cache = cache;
         _providers = providers;
         _downloadPath = configuration.GetValue<string>("DownloadPath");
         _pushbulletAccessToken = configuration.GetValue<string>("PushbulletAccessToken");
@@ -166,7 +163,7 @@ public class StreamService
         if (Directory.EnumerateFiles(outputDirectory, $"{filename}*").Any())
             filename += $"-game2";
 
-        for (var i = 1; i <= _attemptCutover; i++)
+        for (var i = 1; i <= _maxAttempts; i++)
         {
             var swStream = new Stopwatch();
             swStream.Start();
