@@ -18,8 +18,8 @@ public class UpdateGamesJob : IInvocable
     {
         // TOOD: factor in season start and end dates, for each league
 
-        // await SafelyUpdate(_gameService.UpdateCfb);
-        // await SafelyUpdate(gameService.UpdateNfl);
+        await SafelyUpdate(_gameService.UpdateCfb);
+        await SafelyUpdate(_gameService.UpdateNfl);
         await SafelyUpdate(_gameService.UpdateMlb);
         await SafelyUpdate(_gameService.UpdateNba);
         await SafelyUpdate(_gameService.UpdateNhl);

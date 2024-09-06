@@ -36,7 +36,7 @@ public class StreamServiceStub
 
         var gameService = new GameService(context, httpClient, configuration);
         var posterService = new PosterService(posterLogger);
-        var streamService = new StreamService(logger, cache, gameStreamProviders, configuration, gameService, httpClient, posterService);
+        var streamService = new StreamService(logger, gameStreamProviders, configuration, gameService, httpClient, posterService);
 
         var result = await streamService.GetGameStream(league, team);
         Console.WriteLine("Result: " + result.Url);
@@ -46,9 +46,9 @@ public class StreamServiceStub
     [Test]
     public async Task GetGameStreamFromSpecificProviderStub()
     {
-        var providerName = "MethStreamsService";
-        var league = League.Nhl;
-        var team = "Edmonton Oilers";
+        var providerName = "MarkkyService";
+        var league = League.Mlb;
+        var team = "Chicago Cubs";
 
         var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
         Console.WriteLine(url);
@@ -61,8 +61,8 @@ public class StreamServiceStub
             .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
             .Select(x => x.Name);
 
-        var league = League.Nba;
-        var team = "New York Knicks";
+        var league = League.Mlb;
+        var team = "Chicago Cubs";
 
         foreach (var providerName in providerNames)
         {

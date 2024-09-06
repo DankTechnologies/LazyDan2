@@ -7,7 +7,10 @@ public class UpdateGameStub
 {
     private readonly HttpClient httpClient = new HttpClient();
     private readonly GameContext context = new GameContext(new DbContextOptionsBuilder<GameContext>().UseSqlite("Data Source=/home/dan/code/LazyDan2/games.db").Options);
-    private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+    private readonly IConfiguration configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddJsonFile("appsettings.Production.json", optional: true, reloadOnChange: true)
+        .Build();
 
     [SetUp]
     public void Setup()

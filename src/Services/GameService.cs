@@ -222,7 +222,7 @@ public class GameService
             var teams = game.GetProperty("name").GetString().Split(" at ");
             var awayTeam = teams[0];
             var homeTeam = teams[1];
-            var gameTime = DateTime.Parse(game.GetProperty("name").GetString(), null, DateTimeStyles.AssumeUniversal);
+            var gameTime = DateTime.Parse(game.GetProperty("date").GetString(), null, DateTimeStyles.AssumeUniversal);
             var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
 
@@ -315,11 +315,13 @@ public class GameService
         request.Headers.Add("Authorization", $"Bearer {_cfbDataToken}");
         request.Headers.Add("accept", "application/json");
 
-        using var response = await _httpClient.GetAsync(_mlbScheduleApi);
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
         using var stream = await response.Content.ReadAsStreamAsync();
         using var jsonDoc = await JsonDocument.ParseAsync(stream);
 
-        var gamesArray = jsonDoc.RootElement.GetProperty("games").EnumerateArray();
+        var gamesArray = jsonDoc.RootElement.EnumerateArray();
 
         foreach (var game in gamesArray)
         {
