@@ -4,7 +4,7 @@ namespace LazyDan2.Services.Providers;
 public class MarkkyService : IGameStreamProvider
 {
     public int Weight { get; } = 5;
-    public bool IsEnabled { get; } = false;
+    public bool IsEnabled { get; } = true;
     public string Name { get; } = "Markky";
 
     private const string _homeUrl = "https://v.markkystreams.com";
@@ -43,6 +43,11 @@ public class MarkkyService : IGameStreamProvider
     public async Task<string> GetNhlStream(string team)
     {
         return await GetGameStream(team, "video-category/nhl-streams");
+    }
+
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "video-category/wnba-streams");
     }
 
     private async Task<string> GetGameStream(string team, string league)

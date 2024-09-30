@@ -8,4 +8,5 @@ public interface IGameStreamProvider
     Task<string> GetNbaStream(string team);
     Task<string> GetNflStream(string team);
     Task<string> GetNhlStream(string team);
+    Task<string> GetWnbaStream(string team);
 }

@@ -46,6 +46,11 @@ public class StreameastService : IGameStreamProvider
         return await GetGameStream(team, "nhlstreams");
     }
 
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "wnbastreams");
+    }
+
     private async Task<string> GetGameStream(string team, string league)
     {
         var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}");

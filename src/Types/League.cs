@@ -7,4 +7,5 @@ public static class League
     public const string Nba = "NBA";
     public const string Nfl = "NFL";
     public const string Nhl = "NHL";
+    public const string Wnba = "WNBA";
 }

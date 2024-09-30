@@ -8,7 +8,7 @@ public class MethStreamsService : IGameStreamProvider
     public string Name { get; } = "MethStreams";
 
     private const string _originUrl = "https://embedstreamgate.com";
-    private const string _homeUrl = "https://v1.methstreams.me";
+    private const string _homeUrl = "https://pre.methstreams.me";
 
     private readonly HttpClient _httpClient;
 
@@ -44,6 +44,11 @@ public class MethStreamsService : IGameStreamProvider
     public async Task<string> GetNhlStream(string team)
     {
         return await GetGameStream(team, "nhl-streams");
+    }
+
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "wnba-streams");
     }
 
     private async Task<string> GetGameStream(string team, string league)

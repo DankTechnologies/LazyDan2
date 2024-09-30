@@ -56,6 +56,14 @@ public class SimpleController : ControllerBase
     }
 
     [HttpGet]
+    [Route("wnba/{team}")]
+    public IActionResult GetWnbaStream(string team)
+    {
+        return Content(GetPlaylist(League.Wnba, team), "application/vnd.apple.mpegurl");
+    }
+
+
+    [HttpGet]
     [Route("redirect/{league}/{team}/{id}")]
 
     public async Task<IActionResult> StreamRedirect(string league, string team, Guid id)

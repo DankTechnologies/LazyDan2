@@ -45,6 +45,11 @@ public class SportsStream1Service : IGameStreamProvider
         return await GetGameStream(team, "nfl", isCfb: true);
     }
 
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "wnba");
+    }
+
     private async Task<string> GetGameStream(string team, string league, bool isCfb = false)
     {
         if (isCfb)

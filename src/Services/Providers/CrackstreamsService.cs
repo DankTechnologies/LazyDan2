@@ -45,13 +45,18 @@ public class CrackstreamsService : IGameStreamProvider
         return await GetGameStream(team, "nhl");
     }
 
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "wnba");
+    }
+
     private async Task<string> GetGameStream(string team, string league)
     {
         var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}streams/");
 
         team = team.Split(' ').Last();
 
-        var match = Regex.Match(response, $"href=\"({_homeUrl}/watch/.+?)\".+{team}", RegexOptions.IgnoreCase);
+        var match = Regex.Match(response, $"href=\"({_homeUrl}/.+?)\".+{team}", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))

@@ -308,6 +308,8 @@ public class StreamService
             return await provider.GetMlbStream(team);
         else if (league == League.Nba)
             return await provider.GetNbaStream(team);
+        else if (league == League.Wnba)
+            return await provider.GetWnbaStream(team);
         else if (league == League.Nfl)
             return await provider.GetNflStream(team);
         else if (league == League.Nhl)

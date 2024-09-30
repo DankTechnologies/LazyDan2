@@ -7,7 +7,7 @@ public class BestSolarisService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "BestSolaris";
 
-    private const string _homeUrl = "https://bestsolaris.com";
+    private const string _homeUrl = "https://v1.bestsolaris.com";
 
     private readonly HttpClient _httpClient;
 
@@ -43,6 +43,11 @@ public class BestSolarisService : IGameStreamProvider
     public async Task<string> GetNhlStream(string team)
     {
         return await GetGameStream(team, "nhl");
+    }
+
+    public async Task<string> GetWnbaStream(string team)
+    {
+        return await GetGameStream(team, "wnba");
     }
 
     private async Task<string> GetGameStream(string team, string league)

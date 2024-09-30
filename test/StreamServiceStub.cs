@@ -47,8 +47,8 @@ public class StreamServiceStub
     public async Task GetGameStreamFromSpecificProviderStub()
     {
         var providerName = "MarkkyService";
-        var league = League.Mlb;
-        var team = "Chicago Cubs";
+        var league = League.Nfl;
+        var team = "Buffalo Bills";
 
         var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
         Console.WriteLine(url);
@@ -61,8 +61,8 @@ public class StreamServiceStub
             .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
             .Select(x => x.Name);
 
-        var league = League.Mlb;
-        var team = "Chicago Cubs";
+        var league = League.Nfl;
+        var team = "Buffalo Bills";
 
         foreach (var providerName in providerNames)
         {
