@@ -52,11 +52,11 @@ public class BestSolarisService : IGameStreamProvider
 
     private async Task<string> GetGameStream(string team, string league)
     {
-        var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}streams");
+        var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}streams1");
 
         team = team.ToLower().Replace(" ", "-").Replace(".", string.Empty);
 
-        var match = Regex.Match(response, $@"<a.*href=""({_homeUrl}\/{league}streams\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
+        var match = Regex.Match(response, $@"<a.*href=""({_homeUrl}\/{league}streams1\/[^""]*{team}[^""]*)""", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))

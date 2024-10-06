@@ -52,15 +52,23 @@ public class MarkkyService : IGameStreamProvider
 
     private async Task<string> GetGameStream(string team, string league)
     {
-        var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}/");
-
         team = team.Split(' ').Last();
+
+        var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}/");
 
         var match = Regex.Match(response, $"href=\"([^\"]+?)\".+?title=\".*?{team}.*?\"", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))
-            throw new Exception("Couldn't find team URL");
+        {
+            response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}/page/2");
+
+            match = Regex.Match(response, $"href=\"([^\"]+?)\".+?title=\".*?{team}.*?\"", RegexOptions.IgnoreCase);
+            teamLink = match.Groups[1].Value;
+
+            if (string.IsNullOrEmpty(teamLink))
+                throw new Exception("Couldn't find team URL");
+        }
 
         response = await _httpClient.GetStringAsync(teamLink);
         match = Regex.Match(response, $@"""(http.+\.m3u8)""", RegexOptions.IgnoreCase);
