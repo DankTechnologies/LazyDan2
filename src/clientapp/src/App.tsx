@@ -7,6 +7,7 @@ import Nba from './pages/Nba';
 import Nfl from './pages/Nfl';
 import Dvr from "./pages/Dvr";
 import Cfb from "./pages/Cfb";
+import Wnba from "./pages/Wnba";
 
 function App() {
   const params = new URLSearchParams(window.location.search);
@@ -19,6 +20,7 @@ function App() {
           <Route index element={<Navigate to="/mlb" />} />
           <Route path="mlb" element={<Mlb advanced={advanced} />} />
           <Route path="nba" element={<Nba advanced={advanced} />} />
+          <Route path="wnba" element={<Wnba advanced={advanced} />} />
           <Route path="nfl" element={<Nfl advanced={advanced} />} />
           <Route path="cfb" element={<Cfb advanced={advanced} />} />
           <Route path="nhl" element={<Nhl advanced={advanced} />} />

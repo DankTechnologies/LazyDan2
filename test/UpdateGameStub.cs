@@ -58,6 +58,14 @@ public class UpdateGameStub
     }
 
     [Test]
+    public async Task UpdateWnba()
+    {
+        var gameService = new GameService(context, httpClient, configuration);
+
+        await gameService.UpdateWnba();
+    }
+
+    [Test]
     public async Task UpdateEpg()
     {
         var gameService = new GameService(context, httpClient, configuration);

@@ -46,9 +46,9 @@ public class StreamServiceStub
     [Test]
     public async Task GetGameStreamFromSpecificProviderStub()
     {
-        var providerName = "MarkkyService";
+        var providerName = "MethStreamsService";
         var league = League.Nfl;
-        var team = "Buffalo Bills";
+        var team = "New York Jets";
 
         var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
         Console.WriteLine(url);
@@ -62,7 +62,7 @@ public class StreamServiceStub
             .Select(x => x.Name);
 
         var league = League.Nfl;
-        var team = "Buffalo Bills";
+        var team = "New York Jets";
 
         foreach (var providerName in providerNames)
         {
@@ -98,6 +98,7 @@ public class StreamServiceStub
             League.Nfl => await instance.GetNflStream(team),
             League.Nhl => await instance.GetNhlStream(team),
             League.Cfb => await instance.GetCfbStream(team),
+            League.Wnba => await instance.GetWnbaStream(team),
             _ => throw new Exception("Invalid league"),
         };
         var response = await httpClient.GetAsync($"{lazyDanUrl}{spoofUrl}");

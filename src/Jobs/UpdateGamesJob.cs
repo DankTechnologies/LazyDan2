@@ -23,6 +23,7 @@ public class UpdateGamesJob : IInvocable
         await SafelyUpdate(_gameService.UpdateMlb);
         await SafelyUpdate(_gameService.UpdateNba);
         await SafelyUpdate(_gameService.UpdateNhl);
+        await SafelyUpdate(_gameService.UpdateWnba);
 
         // force GC to keep memory consumption in check
         GC.Collect();
