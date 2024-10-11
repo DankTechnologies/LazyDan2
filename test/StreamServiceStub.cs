@@ -16,7 +16,7 @@ public class StreamServiceStub
     private readonly IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
     private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
-    private readonly string lazyDanUrl = "https://lazy.pitpat.me";
+    private readonly string lazyDanUrl = "http://192.168.0.204:8081";
 
     [Test]
     public async Task GetGameStreamStub()
@@ -46,9 +46,9 @@ public class StreamServiceStub
     [Test]
     public async Task GetGameStreamFromSpecificProviderStub()
     {
-        var providerName = "MethStreamsService";
-        var league = League.Nfl;
-        var team = "New York Jets";
+        var providerName = "OneStreamService";
+        var league = League.Nhl;
+        var team = "Chicago Blackhawks";
 
         var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
         Console.WriteLine(url);
@@ -61,8 +61,8 @@ public class StreamServiceStub
             .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
             .Select(x => x.Name);
 
-        var league = League.Nfl;
-        var team = "New York Jets";
+        var league = League.Nhl;
+        var team = "Chicago Blackhawks";
 
         foreach (var providerName in providerNames)
         {
