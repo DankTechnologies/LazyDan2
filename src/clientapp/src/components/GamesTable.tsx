@@ -28,13 +28,13 @@ const GamesTable: React.FC<GamesTableProps> = ({ games, onGameSelect }) => (
                 {games?.map((game, key) => (
                     <tr>
                         <td>
-                            {game.state === 'In Progress' || game.state === 'Halftime' ?
+                            {game.state === 'In Progress' || game.state === 'Halftime' || game.state === 'End of Period' ?
                                 <a href='' onClick={(e) => onGameSelect(e, game)}>{game.awayTeam}</a> :
                                 game.awayTeam
                             }
                         </td>
                         <td>
-                            {game.state === 'In Progress' || game.state === 'Halftime' ?
+                            {game.state === 'In Progress' || game.state === 'Halftime' || game.state === 'End of Period' ?
                                 <a href='' onClick={(e) => onGameSelect(e, game)}>{game.homeTeam}</a> :
                                 game.homeTeam
                             }

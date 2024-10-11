@@ -274,7 +274,6 @@ public class GameService
             var gameTime = DateTime.Parse(game.GetProperty("date").GetString(), null, DateTimeStyles.AssumeUniversal);
             var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
-
             if (gameTime < DateTime.UtcNow.AddDays(-1))
             {
                 continue;
