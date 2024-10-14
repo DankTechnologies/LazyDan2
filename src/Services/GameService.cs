@@ -10,21 +10,27 @@ public class GameService
     private readonly GameContext _context;
     private readonly HttpClient _httpClient;
     private readonly string _cfbDataToken;
-    private const string _nhlDateTimeFormat = "yyyy-MM-dd HH:mm:ss 'UTC'";
-
     private static readonly int CurrentYear = DateTime.Now.Year;
-    private static readonly string _mlbScheduleApi = $"https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={CurrentYear}";
-    private static readonly string _nbaScheduleApi = $"https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json";
-    private static readonly string _nflScheduleApi = $"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?limit=1000&dates={CurrentYear}";
-    private static readonly string _nhlScheduleApi = $"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?limit=1000&dates={CurrentYear}";
+    private readonly DateTime StartDate;
+    private readonly DateTime EndDate;
+    private readonly string DateRange;
+
+    private readonly string _mlbScheduleApi = $"https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={CurrentYear}";
     private static readonly string _cfbScheduleApi = $"https://api.collegefootballdata.com/games?year={CurrentYear}&division=fbs";
-    private static readonly string _wnbaScheduleApi = $"https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?limit=1000&dates={CurrentYear}";
+    private const string _nbaScheduleApi = $"https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json";
+    private string _nflScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={DateRange}";
+    private string _nhlScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates={DateRange}";
+    private string _wnbaScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates={DateRange}";
 
     public GameService(GameContext context, HttpClient httpClient, IConfiguration configuration)
     {
         _context = context;
         _httpClient = httpClient;
         _cfbDataToken = configuration["CfbDataToken"];
+
+        StartDate = DateTime.Now.AddDays(-7);
+        EndDate = StartDate.AddYears(1);
+        DateRange = $"{StartDate:yyyyMMdd}-{EndDate:yyyyMMdd}";
     }
 
     public async Task<Game> GetGame(int id)
@@ -43,14 +49,12 @@ public class GameService
     public IQueryable<Game> GetGames()
     {
         return _context.Games
-            .AsNoTracking()
             .Include(x => x.Dvr);
     }
 
     public IQueryable<Dvr> GetDvrEntries()
     {
         return _context.Dvrs
-            .AsNoTracking()
             .Include(x => x.Game);
     }
 

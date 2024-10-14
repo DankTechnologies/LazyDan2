@@ -142,14 +142,6 @@ public class StreamService
         var swGame = new Stopwatch();
         swGame.Start();
 
-        var dvrEntry = _gameService.GetDvrEntries().FirstOrDefault(x => x.Game.Id == game.Id);
-
-        if (dvrEntry == null)
-            return;
-
-        dvrEntry.Started = true;
-        await _gameService.UpdateDownload(dvrEntry);
-
         var title = $"{game.ShortAwayTeam} at {game.ShortHomeTeam}";
         await SendPush(title, $"Recording started");
 
@@ -257,6 +249,7 @@ public class StreamService
             await SendPush(title, "Recording ended early :(");
 
         _logger.LogInformation("Game over, recording complete");
+        var dvrEntry = _gameService.GetDvrEntries().FirstOrDefault(x => x.Game.Id == game.Id);
         dvrEntry.Completed = true;
         await _gameService.UpdateDownload(dvrEntry);
     }
