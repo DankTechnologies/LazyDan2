@@ -39,50 +39,33 @@ public class GameService
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public async Task<Game> GetCurrentGameByChannel(string channel)
-    {
-        return await GetGames()
-            .Where(x => x.Channel == channel && x.State == GameState.InProgress)
-            .FirstOrDefaultAsync();
-    }
-
     public IQueryable<Game> GetGames()
     {
-        return _context.Games
-            .Include(x => x.Dvr);
+        return _context.Games;
     }
 
-    public IQueryable<Dvr> GetDvrEntries()
+    public async Task ScheduleDownload(Game game)
     {
-        return _context.Dvrs
-            .Include(x => x.Game);
-    }
-
-    public async Task<Dvr> ScheduleDownload(Game game)
-    {
-        var dvr = new Dvr
-        {
-            GameId = game.Id,
-            Started = false,
-            Completed = false
-        };
-
-        await _context.Dvrs.AddAsync(dvr);
+        game.DownloadSelected = true;
         await _context.SaveChangesAsync();
-        return dvr;
     }
 
     public async Task CancelDownload(Game game)
     {
-        _context.Dvrs.Remove(game.Dvr);
+        game.DownloadSelected = false;
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Dvr> UpdateDownload(Dvr dvr)
+    public async Task StartDownload(Game game)
     {
-        _context.Dvrs.Update(dvr);
+        game.DownloadStarted = true;
         await _context.SaveChangesAsync();
-        return dvr;
+    }
+
+    public async Task CompleteDownload(Game game)
+    {
+        game.DownloadCompleted = true;
+        await _context.SaveChangesAsync();
     }
 
     public async Task UpdateMlb()
@@ -405,46 +388,6 @@ public class GameService
                 match.State = state;
                 _context.Games.Update(match);
             }
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task UpdateEpg()
-    {
-        var games = await _context.Games
-            .Where(x => x.GameTime > DateTime.Now.AddHours(-8) && x.GameTime < DateTime.Now.AddDays(7))
-            .OrderBy(g => g.GameTime)
-            .ToListAsync();
-
-        var gameTimesByLeague = new Dictionary<string, List<DateTime>>();
-
-        foreach (var game in games)
-        {
-            if (!gameTimesByLeague.ContainsKey(game.League))
-                gameTimesByLeague[game.League] = new List<DateTime>();
-
-            var trackedGameTimes = gameTimesByLeague[game.League];
-            var allocated = false;
-
-            for (int i = 0; i < trackedGameTimes.Count; i++)
-            {
-                if (trackedGameTimes[i] <= game.GameTime)
-                {
-                    trackedGameTimes[i] = game.GameTime.AddHours(4);
-                    game.Channel = $"{game.League}-{i + 1:00}";
-                    allocated = true;
-                    break;
-                }
-            }
-
-            if (!allocated)
-            {
-                trackedGameTimes.Add(game.GameTime.AddHours(4));
-                game.Channel = $"{game.League}-{trackedGameTimes.Count:00}";
-            }
-
-            _context.Update(game);
         }
 
         await _context.SaveChangesAsync();

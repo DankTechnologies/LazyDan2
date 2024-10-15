@@ -11,7 +11,6 @@ public class StreamService
 {
     private readonly ILogger<StreamService> _logger;
     private readonly GameService _gameService;
-    private readonly PosterService _posterService;
     private readonly IEnumerable<IGameStreamProvider> _providers;
     private readonly HttpClient _client;
     private readonly string _downloadPath;
@@ -29,7 +28,7 @@ public class StreamService
         "--hls-live-edge 12 " +
         "--retry-open 5 " +
         "--ringbuffer-size 256M ";
-    public StreamService(ILogger<StreamService> logger, IEnumerable<IGameStreamProvider> providers, IConfiguration configuration, GameService gameService, HttpClient client, PosterService posterService)
+    public StreamService(ILogger<StreamService> logger, IEnumerable<IGameStreamProvider> providers, IConfiguration configuration, GameService gameService, HttpClient client)
     {
         _logger = logger;
         _providers = providers;
@@ -42,42 +41,41 @@ public class StreamService
         _lazyDanUrl = configuration.GetValue<string>("LazyDanUrl");
         _lazyDanLanUrl = configuration.GetValue<string>("LazyDanLanUrl");
         _gameService = gameService;
-        _posterService = posterService;
         _client = client;
     }
 
-    public async Task<(string Url, string Provider)> GetGameStream(string league, string team, string forceProvider = null)
+    public async Task<GameStream> GetGameStream(string league, string team, string forceProvider = null)
     {
         if (forceProvider != null)
         {
             var provider = _providers.First(x => x.Name == forceProvider);
             var url = await GetStreamFromProvider(provider, league, team);
             await SanityTestStream(url);
-            return (Url: url, Provider: provider.Name);
+            return new GameStream(url, provider.Name);
         }
 
         var providerTasks = _providers
             .Where(x => x.IsEnabled)
             .Select(provider => GetStreamWithTimeout(provider, league, team));
 
-        var results = await Task.WhenAll(providerTasks);
+        var streams = await Task.WhenAll(providerTasks);
 
-        var validResults = results
+        var validStreams = streams
             .Where(x => x.Url != null)
             .ToList();
 
-        if (validResults.Count == 0)
+        if (validStreams.Count == 0)
         {
             throw new Exception($"No stream found for {league} {team}");
         }
 
-        _logger.LogInformation("Found {count} valid streams for {league} {team}", validResults.Count, league, team);
-        _logger.LogInformation("Valid streams: {streams}", string.Join(", ", validResults.Select(x => x.Provider)));
+        _logger.LogInformation("Found {count} valid streams for {league} {team}", validStreams.Count, league, team);
+        _logger.LogInformation("Valid streams: {streams}", string.Join(", ", validStreams.Select(x => x.Provider)));
 
-        return SelectRandomStream(validResults, league, team);
+        return SelectRandomStream(validStreams, league, team);
     }
 
-    private async Task<(string Url, string Provider)> GetStreamWithTimeout(IGameStreamProvider provider, string league, string team)
+    private async Task<GameStream> GetStreamWithTimeout(IGameStreamProvider provider, string league, string team)
     {
         var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
 
@@ -91,7 +89,7 @@ public class StreamService
             if (completedTask == timeoutTask)
             {
                 _logger.LogInformation("Timed out getting stream from {provider} for {league} {team}", provider.Name, league, team);
-                return (Url: null, Provider: provider.Name);
+                return new GameStream(null, provider.Name);
             }
 
             var url = await urlTask;
@@ -99,23 +97,23 @@ public class StreamService
 
             _logger.LogInformation("Successful getting stream from {provider} for {league} {team}", provider.Name, league, team);
 
-            return (Url: url, Provider: provider.Name);
+            return new GameStream(url, provider.Name);
         }
         catch (Exception exc)
         {
             _logger.LogError(exc, "Error getting stream from {Provider} for {League} {Team}", provider.Name, league, team);
-            return (Url: null, Provider: provider.Name);
+            return new GameStream(null, provider.Name);
         }
     }
 
-    private (string Url, string Provider) SelectRandomStream(List<(string Url, string Provider)> validResults, string league, string team)
+    private GameStream SelectRandomStream(List<GameStream> validStreams, string league, string team)
     {
-        var totalWeight = validResults
+        var totalWeight = validStreams
             .Sum(result => _providers.First(x => x.Name == result.Provider).Weight);
 
         var randomWeightPoint = new Random().Next(0, totalWeight);
 
-        foreach (var result in validResults)
+        foreach (var result in validStreams)
         {
             randomWeightPoint -= _providers.First(x => x.Name == result.Provider).Weight;
 
@@ -129,12 +127,6 @@ public class StreamService
         throw new Exception($"No stream found for {league} {team}");
     }
 
-    public async Task<(string Url, string Provider)> GetGameStream(string channel)
-    {
-        var game = await _gameService.GetCurrentGameByChannel(channel) ?? throw new Exception("No game found");
-        return await GetGameStream(game.League, game.HomeTeam);
-    }
-
     public async Task DownloadGame(Game game)
     {
         _logger.LogInformation("Downloading {awayTeam} at {homeTeam}", game.AwayTeam, game.HomeTeam);
@@ -143,10 +135,13 @@ public class StreamService
         swGame.Start();
 
         var title = $"{game.ShortAwayTeam} at {game.ShortHomeTeam}";
-        await SendPush(title, $"Recording started");
+        await SendPush(title, $"Download started");
 
         var outputDirectory = Path.Combine(_downloadPath, game.League);
+        var logDirectory = Path.Combine(outputDirectory, "logs");
+
         Directory.CreateDirectory(outputDirectory);
+        Directory.CreateDirectory(logDirectory);
 
         var localGameTime = game.GameTime.ToLocalTime();
         var filename = $"{localGameTime:MMdd}-{game.ShortAwayTeam}-{game.ShortHomeTeam}".Replace(" ", "-");
@@ -161,9 +156,7 @@ public class StreamService
             swStream.Start();
 
             var outputPath = Path.Combine(outputDirectory, $"{filename}-{i:00}.ts");
-            var nfoPath = Path.Combine(outputDirectory, $"{filename}-{i:00}.nfo");
-            var logPath = Path.Combine(outputDirectory, $"{filename}-{i:00}.log");
-            var posterPath = Path.Combine(outputDirectory, $"{filename}-{i:00}.png");
+            var logPath = Path.Combine(logDirectory, $"{filename}-{i:00}.log");
 
             try
             {
@@ -223,14 +216,6 @@ public class StreamService
                     File.Move(tempPath, outputPath);
                 }
 
-                var nfoXml = StreamUtils.GetNfoFile(game, i);
-                nfoXml.Save(nfoPath);
-
-                var posterBytes = _posterService.CombineLogos(game.League, game.HomeTeam, game.AwayTeam);
-
-                if (posterBytes != null)
-                    File.WriteAllBytes(posterPath, posterBytes);
-
                 await SendWebhooks();
             }
             catch (Exception ex)
@@ -238,10 +223,10 @@ public class StreamService
                 _logger.LogError(ex, ex.Message);
             }
 
-            var g = await _gameService.GetGame(game.Id);
-            _logger.LogInformation("Game is {state}, attempt {attempt}", g.State, i);
+            game = await _gameService.GetGame(game.Id);
+            _logger.LogInformation("Game is {state}, attempt {attempt}", game.State, i);
 
-            if (g.State == GameState.Final)
+            if (game.State == GameState.Final)
                 break;
         }
 
@@ -249,12 +234,10 @@ public class StreamService
             await SendPush(title, "Recording ended early :(");
 
         _logger.LogInformation("Game over, recording complete");
-        var dvrEntry = _gameService.GetDvrEntries().FirstOrDefault(x => x.Game.Id == game.Id);
-        dvrEntry.Completed = true;
-        await _gameService.UpdateDownload(dvrEntry);
+        await _gameService.CompleteDownload(game);
     }
 
-    public async Task SendPush(string title, string message)
+    internal async Task SendPush(string title, string message)
     {
         try
         {
@@ -269,7 +252,7 @@ public class StreamService
         }
     }
 
-    public async Task SendWebhooks()
+    internal async Task SendWebhooks()
     {
         try
         {

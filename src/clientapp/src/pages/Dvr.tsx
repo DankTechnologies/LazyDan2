@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Game, Dvr as IDvr } from '../interfaces/IGame';
+import { Game } from '../interfaces/IGame';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { solid } from '@fortawesome/fontawesome-svg-core/import.macro'
 import { isMobile } from 'react-device-detect';
+import DvrIcon from '../components/DvrIcon';
 
 const Dvr = () => {
     const [games, setGames] = useState<Game[]>([]);
@@ -32,33 +33,18 @@ const Dvr = () => {
         }
     }
 
-    const getDvrIcon = (dvr: IDvr | undefined) => {
-        if (!dvr)
-            return null;
-        if (dvr.completed)
-            return <FontAwesomeIcon className="ml-3" icon={solid("video")} title="Completed" color='#50c77c' />;
-        if (dvr.started)
-            return <FontAwesomeIcon className="ml-3" icon={solid("video")} title="Recording" color='#c75050' />;
-
-        return <FontAwesomeIcon className="ml-3" icon={solid("video")}  title="Scheduled" />;
-    };
-
     const toggleRecording = async (game: Game) => {
-        if (game.dvr) {
+        const url = game.downloadSelected
+            ? `dvrmanagement/cancel/${game.id}`
+            : `dvrmanagement/schedule/${game.id}`;
 
-            if (game.dvr.started)
-                return;
+        const method = game.downloadSelected ? 'DELETE' : 'POST';
 
-            await fetch(`dvrmanagement/cancel/${game.id}`, {
-                method: 'DELETE',
-            })
-                .then(x => fetchGames(search))
-        }
-        else {
-            await fetch(`dvrmanagement/schedule/${game.id}`, {
-                method: 'POST',
-            })
-                .then(x => fetchGames(search))
+        try {
+            await fetch(url, { method });
+            await fetchGames(search);
+        } catch (error) {
+            console.error('Error toggling recording:', error);
         }
     }
 
@@ -76,7 +62,7 @@ const Dvr = () => {
         <tr key={key} onClick={() => toggleRecording(game)} className="clickable-row">
             <td>
                 {getGameTime(new Date(game.gameTime))}
-                {getDvrIcon(game.dvr)}
+                <DvrIcon game={game} />
             </td>
             <td className="is-hidden-mobile">{game.league}</td>
             <td>{isMobile ? game.shortAwayTeam.charAt(0).toUpperCase() + game.shortAwayTeam.slice(1) : game.awayTeam}</td>

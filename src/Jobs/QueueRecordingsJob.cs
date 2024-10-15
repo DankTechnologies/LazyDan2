@@ -26,20 +26,16 @@ public class QueueRecordingsJob : IInvocable
 
         try
         {
-            var entries = await _gameService.GetDvrEntries().ToListAsync();
+            var games = await _gameService.GetGames()
+                .Where(x => x.DownloadSelected && !x.DownloadStarted && DateTime.UtcNow > x.GameTime)
+                .ToListAsync();
 
-            var entriesToRecord = entries
-                .Where(x => !x.Started && DateTime.UtcNow > x.Game.GameTime)
-                .ToList();
-
-            foreach (var entry in entriesToRecord)
+            foreach (var game in games)
             {
-                _logger.LogInformation("Marking recording started for {awayTeam} at {homeTeam}", entry.Game.AwayTeam, entry.Game.HomeTeam);
+                _logger.LogInformation("Starting download for {awayTeam} at {homeTeam}", game.AwayTeam, game.HomeTeam);
+                await _gameService.StartDownload(game);
 
-                entry.Started = true;
-                await _gameService.UpdateDownload(entry);
-
-                _queue.QueueInvocableWithPayload<DownloadGamesJob, Game>(entry.Game);
+                _queue.QueueInvocableWithPayload<DownloadGamesJob, Game>(game);
             }
         }
         finally

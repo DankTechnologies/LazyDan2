@@ -22,3 +22,4 @@ const useFetchGames = (league: string) => {
 };
 
 export default useFetchGames;
+

@@ -1,4 +1,4 @@
-import { Game, Dvr as IDvr } from './IGame';
+import { Game } from './IGame';
 
 export interface TopControlsProps {
     refresh: () => void;

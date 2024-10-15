@@ -7,13 +7,7 @@ export interface Game {
     shortAwayTeam: string;
     state: string;
     gameTime: Date;
-    dvr?: Dvr;
-}
-
-export interface Dvr {
-    id: number;
-    gameId: number;
-    started: boolean;
-    completed: boolean;
-    game?: Game;
+    downloadSelected: boolean;
+    downloadStarted: boolean;
+    downloadCompleted: boolean
 }
