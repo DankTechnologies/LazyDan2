@@ -18,7 +18,7 @@ public class GameService
     private readonly string _mlbScheduleApi = $"https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={CurrentYear}";
     private static readonly string _cfbScheduleApi = $"https://api.collegefootballdata.com/games?year={CurrentYear}&division=fbs";
     private const string _nbaScheduleApi = $"https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json";
-    private string _nflScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={DateRange}";
+    private string _nflScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={DateRange}&limit=1000";
     private string _nhlScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates={DateRange}";
     private string _wnbaScheduleApi => $"https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates={DateRange}";
 
@@ -28,7 +28,7 @@ public class GameService
         _httpClient = httpClient;
         _cfbDataToken = configuration["CfbDataToken"];
 
-        StartDate = DateTime.Now.AddDays(-7);
+        StartDate = DateTime.Now.AddDays(-1);
         EndDate = StartDate.AddYears(1);
         DateRange = $"{StartDate:yyyyMMdd}-{EndDate:yyyyMMdd}";
     }
