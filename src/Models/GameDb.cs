@@ -14,9 +14,9 @@ public class Game
     public string AwayTeam { get; set; }
     public DateTime GameTime { get; set; }
     public string State { get; set;}
-    public string Channel { get; set; }
-    public Dvr Dvr { get; set; }
-
+    public bool DownloadSelected { get; set; }
+    public bool DownloadStarted { get; set; }
+    public bool DownloadCompleted { get; set; }
     public string ShortHomeTeam => League == LazyDan2.Types.League.Cfb
         ? HomeTeam?.Replace(' ', '-').ToLower()
         : HomeTeam?.Split(' ').Last().ToLower();
@@ -31,8 +31,6 @@ public class Dvr
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
     public int GameId { get; set; }
-    public bool Started { get; set; }
-    public bool Completed { get; set; }
 
     [ForeignKey("GameId")]
     public virtual Game Game { get; set; }
@@ -44,7 +42,6 @@ public class GameContext : DbContext
     }
 
     public DbSet<Game> Games { get; set; }
-    public DbSet<Dvr> Dvrs { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

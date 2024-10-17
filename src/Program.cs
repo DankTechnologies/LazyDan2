@@ -40,7 +40,6 @@ foreach (var type in gameStreamProviders)
 // Coravel
 builder.Services.AddScoped<DownloadGamesJob>();
 builder.Services.AddScoped<QueueRecordingsJob>();
-builder.Services.AddScoped<UpdateEpgJob>();
 builder.Services.AddScoped<UpdateGamesJob>();
 builder.Services.AddScheduler();
 builder.Services.AddQueue();
@@ -69,6 +68,7 @@ using (var scope = app.Services.CreateScope())
 // Coravel
 
 app.Services.UseScheduler(scheduler => {
+
     scheduler
         .Schedule<UpdateGamesJob>()
         .EveryFiveMinutes()
@@ -79,9 +79,6 @@ app.Services.UseScheduler(scheduler => {
         .EveryMinute()
         .PreventOverlapping(nameof(QueueRecordingsJob));
 
-    scheduler
-        .Schedule<UpdateEpgJob>()
-        .Daily();
 }).OnError(x => logger.LogError(x, x.Message));
 
 // Middleware

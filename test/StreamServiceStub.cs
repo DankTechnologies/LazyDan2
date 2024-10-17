@@ -36,7 +36,7 @@ public class StreamServiceStub
 
         var gameService = new GameService(context, httpClient, configuration);
         var posterService = new PosterService(posterLogger);
-        var streamService = new StreamService(logger, gameStreamProviders, configuration, gameService, httpClient, posterService);
+        var streamService = new StreamService(logger, gameStreamProviders, configuration, gameService, httpClient);
 
         var result = await streamService.GetGameStream(league, team);
         Console.WriteLine("Result: " + result.Url);

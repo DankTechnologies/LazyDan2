@@ -65,14 +65,6 @@ public class UpdateGameStub
         await gameService.UpdateWnba();
     }
 
-    [Test]
-    public async Task UpdateEpg()
-    {
-        var gameService = new GameService(context, httpClient, configuration);
-
-        await gameService.UpdateEpg();
-    }
-
     [OneTimeTearDown]
     public void TearDown()
     {

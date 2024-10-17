@@ -1,18 +1,5 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { solid } from '@fortawesome/fontawesome-svg-core/import.macro';
 import { GamesTableProps } from "../interfaces/ISportsPageTypes";
-import { Dvr as IDvr } from '../interfaces/IGame';
-
-const getDvrIcon = (dvr: IDvr | undefined) => {
-    if (!dvr)
-        return null;
-    if (dvr.completed)
-        return <FontAwesomeIcon className="ml-3" icon={solid("video")} title="Completed" color='#50c77c' />;
-    if (dvr.started)
-        return <FontAwesomeIcon className="ml-3" icon={solid("video")} title="Recording" color='#c75050' />;
-
-    return <FontAwesomeIcon className="ml-3" icon={solid("video")} title="Scheduled" />;
-};
+import DvrIcon from './DvrIcon';
 
 const GamesTable: React.FC<GamesTableProps> = ({ games, onGameSelect }) => (
     <div className="table-wrapper">
@@ -41,7 +28,7 @@ const GamesTable: React.FC<GamesTableProps> = ({ games, onGameSelect }) => (
                         </td>
                         <td>
                             {new Date(game.gameTime).toTimeString().split(' ')[0].substring(0, 5)}
-                            {getDvrIcon(game.dvr)}
+                            <DvrIcon game={game} />
                         </td>
                     </tr>
                 ))}
