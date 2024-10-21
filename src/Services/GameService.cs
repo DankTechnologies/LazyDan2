@@ -96,7 +96,9 @@ public class GameService
                     startTimeTbd ||
                     gameType == "PR" ||
                     string.IsNullOrWhiteSpace(homeTeam) ||
-                    string.IsNullOrWhiteSpace(awayTeam)
+                    string.IsNullOrWhiteSpace(awayTeam) ||
+                    homeTeam.Contains("TBD") ||
+                    awayTeam.Contains("TBD")
                 )
                 {
                     continue;
@@ -164,7 +166,9 @@ public class GameService
                 if (
                     gameTime < DateTime.UtcNow.AddDays(-1) ||
                     string.IsNullOrWhiteSpace(homeTeam) ||
-                    string.IsNullOrWhiteSpace(awayTeam)
+                    string.IsNullOrWhiteSpace(awayTeam) ||
+                    homeTeam.Contains("TBD") ||
+                    awayTeam.Contains("TBD")
                 )
                 {
                     continue;
@@ -214,7 +218,11 @@ public class GameService
             var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
 
-            if (gameTime < DateTime.UtcNow.AddDays(-1))
+            if (
+                gameTime < DateTime.UtcNow.AddDays(-1) ||
+                homeTeam.Contains("TBD") ||
+                awayTeam.Contains("TBD")
+            )
             {
                 continue;
             }
@@ -261,7 +269,11 @@ public class GameService
             var gameTime = DateTime.Parse(game.GetProperty("date").GetString(), null, DateTimeStyles.AssumeUniversal);
             var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
-            if (gameTime < DateTime.UtcNow.AddDays(-1))
+            if (
+                gameTime < DateTime.UtcNow.AddDays(-1) ||
+                homeTeam.Contains("TBD") ||
+                awayTeam.Contains("TBD")
+            )
             {
                 continue;
             }
@@ -309,7 +321,11 @@ public class GameService
             var state = game.GetProperty("status").GetProperty("type").GetProperty("description").GetString();
 
 
-            if (gameTime < DateTime.UtcNow.AddDays(-1))
+            if (
+                gameTime < DateTime.UtcNow.AddDays(-1) ||
+                homeTeam.Contains("TBD") ||
+                awayTeam.Contains("TBD")
+            )
             {
                 continue;
             }
