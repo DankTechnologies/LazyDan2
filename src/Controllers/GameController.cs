@@ -21,23 +21,23 @@ public class GameController : ControllerBase
     [HttpGet]
     [Route("all")]
     public IActionResult GetAllGames([FromQuery] string search)
-            {
-            var todayUtc = DateTime.Today.ToUniversalTime();
+    {
+        var todayUtc = DateTime.Today.ToUniversalTime();
 
-            IQueryable<Game> games = _gameService.GetGames()
-                .Where(x => x.GameTime >= todayUtc || x.State == GameState.InProgress)
-                .OrderBy(x => x.GameTime);
+        IQueryable<Game> games = _gameService.GetGames()
+            .Where(x => x.GameTime >= todayUtc || x.State == GameState.InProgress)
+            .OrderBy(x => x.GameTime);
 
-            if (!string.IsNullOrEmpty(search))
-            {
-                games = games.Where(game => game.League.ToLower().Contains(search.ToLower())
-                                            || game.HomeTeam.ToLower().Contains(search.ToLower())
-                                            || game.AwayTeam.ToLower().Contains(search.ToLower()));
-            }
+        if (!string.IsNullOrEmpty(search))
+        {
+            games = games.Where(game => game.League.ToLower().Contains(search.ToLower())
+                                        || game.HomeTeam.ToLower().Contains(search.ToLower())
+                                        || game.AwayTeam.ToLower().Contains(search.ToLower()));
+        }
 
-            var ret = games.Take(_maxGames).ToList();
+        var ret = games.Take(_maxGames).ToList();
 
-            return Ok(ret);
+        return Ok(ret);
     }
 
     [HttpGet]

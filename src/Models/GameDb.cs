@@ -25,16 +25,6 @@ public class Game
         : AwayTeam?.Split(' ').Last().ToLower();
 }
 
-public class Dvr
-{
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    public int GameId { get; set; }
-
-    [ForeignKey("GameId")]
-    public virtual Game Game { get; set; }
-}
 public class GameContext : DbContext
 {
     public GameContext(DbContextOptions<GameContext> options) : base(options)
@@ -45,16 +35,17 @@ public class GameContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToUtcStringConverter>();
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
     }
 }
 
-public class DateTimeToUtcStringConverter : ValueConverter<DateTime, string>
+public class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
 {
-    public DateTimeToUtcStringConverter()
-    : base(
-        x => x.ToUniversalTime().ToString("o"),
-        x => DateTime.Parse(x, null, DateTimeStyles.RoundtripKind)
-    )
-    {}
+    public UtcDateTimeConverter()
+        : base(
+            static datetime => datetime.ToUniversalTime(),
+            static datetime => DateTime.SpecifyKind(datetime, DateTimeKind.Utc)
+            )
+    {
+    }
 }
