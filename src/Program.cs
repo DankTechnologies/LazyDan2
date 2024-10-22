@@ -19,7 +19,10 @@ builder.Logging.AddSimpleConsole(x => {
     x.TimestampFormat = "[MM-dd HH:mm:ss] ";
 });
 
-builder.Services.AddDbContext<GameContext>(options => options.UseSqlite(sqliteConnectionString));
+builder.Services.AddDbContext<GameContext>(options => options
+    .UseSqlite(sqliteConnectionString)
+    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+);
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<StreamService>();
 builder.Services.AddSingleton<PosterService>();

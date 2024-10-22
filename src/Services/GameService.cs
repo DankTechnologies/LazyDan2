@@ -47,24 +47,28 @@ public class GameService
     public async Task ScheduleDownload(Game game)
     {
         game.DownloadSelected = true;
+        _context.Games.Update(game);
         await _context.SaveChangesAsync();
     }
 
     public async Task CancelDownload(Game game)
     {
         game.DownloadSelected = false;
+        _context.Games.Update(game);
         await _context.SaveChangesAsync();
     }
 
     public async Task StartDownload(Game game)
     {
         game.DownloadStarted = true;
+        _context.Games.Update(game);
         await _context.SaveChangesAsync();
     }
 
     public async Task CompleteDownload(Game game)
     {
         game.DownloadCompleted = true;
+        _context.Games.Update(game);
         await _context.SaveChangesAsync();
     }
 
