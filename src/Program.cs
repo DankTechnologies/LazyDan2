@@ -6,6 +6,7 @@ using LazyDan2.Middleware;
 using LazyDan2.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 var environmentName = builder.Environment.EnvironmentName;
@@ -51,7 +52,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddControllers()
    .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient().UseHttpClientMetrics();
 builder.Services.AddHealthChecks();
 builder.Services.AddResponseCaching();
 
@@ -102,9 +103,11 @@ app.UseSwaggerUI(c =>
 app.UseResponseCaching();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseHttpMetrics();
 
 app.MapHealthChecks("/Health");
 app.MapDefaultControllerRoute();
+app.MapMetrics();
 app.MapFallbackToFile("index.html"); ;
 
 app.Run();
