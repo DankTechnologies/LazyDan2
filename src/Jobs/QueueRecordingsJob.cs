@@ -7,7 +7,6 @@ namespace LazyDan2.Jobs;
 
 public class QueueRecordingsJob : IInvocable
 {
-    private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly GameService _gameService;
     private readonly IQueue _queue;
 
@@ -22,25 +21,16 @@ public class QueueRecordingsJob : IInvocable
 
     public async Task Invoke()
     {
-        await _semaphore.WaitAsync();
+        var games = await _gameService.GetGames()
+            .Where(x => x.DownloadSelected && !x.DownloadStarted && DateTime.UtcNow > x.GameTime)
+            .ToListAsync();
 
-        try
+        foreach (var game in games)
         {
-            var games = await _gameService.GetGames()
-                .Where(x => x.DownloadSelected && !x.DownloadStarted && DateTime.UtcNow > x.GameTime)
-                .ToListAsync();
+            _logger.LogInformation("Starting download for {awayTeam} at {homeTeam}", game.AwayTeam, game.HomeTeam);
+            await _gameService.StartDownload(game);
 
-            foreach (var game in games)
-            {
-                _logger.LogInformation("Starting download for {awayTeam} at {homeTeam}", game.AwayTeam, game.HomeTeam);
-                await _gameService.StartDownload(game);
-
-                _queue.QueueInvocableWithPayload<DownloadGamesJob, Game>(game);
-            }
-        }
-        finally
-        {
-            _semaphore.Release();
+            _queue.QueueInvocableWithPayload<DownloadGamesJob, Game>(game);
         }
     }
 }
