@@ -7,7 +7,7 @@ public class MethStreamsService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "MethStreams";
 
-    private const string _originUrl = "https://v1.bestsolaris.com";
+    private const string _originUrl = "https://embedstreamgate.com";
     private const string _homeUrl = "https://pre.methstreams.me";
 
     private readonly HttpClient _httpClient;
@@ -65,7 +65,7 @@ public class MethStreamsService : IGameStreamProvider
 
         response = await _httpClient.GetStringAsync(teamLink);
 
-        match = Regex.Match(response, $@"src=""(https://v1.bestsolaris.com[^""]+)""", RegexOptions.IgnoreCase);
+        match = Regex.Match(response, $@"src=""({_originUrl}[^""]+)""", RegexOptions.IgnoreCase);
         var embedLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(embedLink))
