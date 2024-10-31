@@ -7,7 +7,7 @@ public class BestSolarisService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "BestSolaris";
 
-    private const string _homeUrl = "https://v1.bestsolaris.com";
+    private const string _homeUrl = "https://v3.bestsolaris.com";
 
     private readonly HttpClient _httpClient;
 
