@@ -5,7 +5,7 @@ namespace LazyDan2.Services.Providers;
 public class OneStreamService : IGameStreamProvider
 {
     public int Weight { get; } = 1;
-    public bool IsEnabled { get; } = true;
+    public bool IsEnabled { get; } = false;
     public string Name { get; } = "OneStream";
 
     private const string _homeUrl = "https://1stream.eu";

@@ -5,7 +5,7 @@ namespace LazyDan2.Services.Providers;
 public class StreameastService : IGameStreamProvider
 {
     public int Weight { get; } = 1;
-    public bool IsEnabled { get; } = true;
+    public bool IsEnabled { get; } = false;
     public string Name { get; } = "Streameast";
 
     private const string _homeUrl = "https://www.streameast.gg";

@@ -12,7 +12,7 @@ public class StreamServiceStub
     private readonly ILogger<StreamService> logger = new LoggerFactory().CreateLogger<StreamService>();
     private readonly ILogger<PosterService> posterLogger = new LoggerFactory().CreateLogger<PosterService>();
     private readonly HttpClient httpClient = new HttpClient();
-    private readonly GameContext context = new GameContext(new DbContextOptionsBuilder<GameContext>().UseSqlite("Data Source=/data/lazydan2/games.db").Options);
+    private readonly GameContext context = new GameContext(new DbContextOptionsBuilder<GameContext>().UseSqlite("Data Source=/mnt/shares/documents/lazydan2/games.db").Options);
     private readonly IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
     private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
@@ -46,9 +46,9 @@ public class StreamServiceStub
     [Test]
     public async Task GetGameStreamFromSpecificProviderStub()
     {
-        var providerName = "MethStreamsService";
-        var league = League.Nfl;
-        var team = "New York Jets";
+        var providerName = "StreamedSuService";
+        var league = League.Mlb;
+        var team = "New York Yankees";
 
         var url = await GetGameStreamFromSpecificProvider(providerName, league, team);
         Console.WriteLine(url);
@@ -61,8 +61,8 @@ public class StreamServiceStub
             .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
             .Select(x => x.Name);
 
-        var league = League.Nfl;
-        var team = "New York Jets";
+        var league = League.Mlb;
+        var team = "New York Yankees";
 
         foreach (var providerName in providerNames)
         {
@@ -84,8 +84,12 @@ public class StreamServiceStub
             .Where(t => typeof(IGameStreamProvider).IsAssignableFrom(t) && !t.IsInterface)
             .FirstOrDefault(x => x.Name == providerName);
 
-        object[] constructorArgs = { new HttpClient() };
-        var instance = (IGameStreamProvider)Activator.CreateInstance(provider, constructorArgs);
+        object[] constructorArgs= { new HttpClient() };
+        object[] constructorArgsStreamedSu = { new HttpClient(), new GameService(context, new HttpClient(), configuration) };
+
+        var instance = providerName == "StreamedSuService"
+            ? (IGameStreamProvider)Activator.CreateInstance(provider, constructorArgsStreamedSu)
+            : (IGameStreamProvider)Activator.CreateInstance(provider, constructorArgs);
 
         if (!instance.IsEnabled)
             throw new Exception("Disabled");

@@ -54,6 +54,7 @@ public class SpoofController : ControllerBase
                     baseUrl += '/';
             }
 
+            // TS spoofing
             if (contents.Contains(".m3u8") || contents.Contains(".css"))
             {
                 contents = Regex.Replace(contents, @"(^.+(m3u8|css)(\?.*)?$)", $"/spoof/playlist?url={baseUrl}$1&origin={origin}", RegexOptions.Multiline);
@@ -66,6 +67,12 @@ public class SpoofController : ControllerBase
             {
                 // relative path to segment
                 contents = Regex.Replace(contents, @"^[^#].*", $"/spoof/ts?url={baseUrl}$0&origin={origin}", RegexOptions.Multiline);
+            }
+
+            // KEY spoofing
+            if (contents.Contains("EXT-X-KEY"))
+            {
+                contents = Regex.Replace(contents, "URI=\"([^\"]+)", $"URI=\"/spoof/key?url=https://{request.RequestUri.Host}$1&origin={origin}");
             }
 
             return Ok(contents);
@@ -98,6 +105,36 @@ public class SpoofController : ControllerBase
 
             var stream = await response.Content.ReadAsStreamAsync();
             return File(stream, "video/MP2T");
+        }
+        catch (TaskCanceledException)
+        {
+            return StatusCode(408, "Request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error occurred while fetching playlist, origin: {origin}", origin);
+            return StatusCode(500, "Error occurred");
+        }
+    }
+
+    [HttpGet]
+    [Route("key")]
+    public async Task<IActionResult> Key(string url, string origin)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Referer", $"{origin}/");
+            request.Headers.Add("Origin", origin);
+
+            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            if (!response.IsSuccessStatusCode)
+                return StatusCode((int)response.StatusCode, response.ReasonPhrase);
+
+            var contents = await response.Content.ReadAsStringAsync();
+
+            return Ok(contents);
         }
         catch (TaskCanceledException)
         {
