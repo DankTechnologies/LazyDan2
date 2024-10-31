@@ -7,7 +7,7 @@ public class CrackstreamsService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "Crackstreams";
 
-    private const string _homeUrl = "https://crackstreams.dev";
+    private const string _homeUrl = "https://thecrackstreams.to";
 
     private readonly HttpClient _httpClient;
 
@@ -52,11 +52,11 @@ public class CrackstreamsService : IGameStreamProvider
 
     private async Task<string> GetGameStream(string team, string league)
     {
-        var response = await _httpClient.GetStringAsync($"{_homeUrl}/{league}streams/");
+        var response = await _httpClient.GetStringAsync($"{_homeUrl}/category/{league}-streams/");
 
         team = team.Split(' ').Last();
 
-        var match = Regex.Match(response, $"href=\"({_homeUrl}/.+?)\".+{team}", RegexOptions.IgnoreCase);
+        var match = Regex.Match(response, $"href=\"({_homeUrl}/.+{team}[^\"]+)\"", RegexOptions.IgnoreCase);
         var teamLink = match.Groups[1].Value;
 
         if (string.IsNullOrEmpty(teamLink))
