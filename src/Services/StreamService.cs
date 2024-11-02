@@ -44,7 +44,7 @@ public class StreamService
         _client = client;
     }
 
-    public async Task<GameStream> GetGameStream(string league, string team, string forceProvider = null)
+    public async Task<GameStream> GetGameStream(string league, string team, string forceProvider = null, bool onlyHighQuality = false)
     {
         if (forceProvider != null)
         {
@@ -55,7 +55,7 @@ public class StreamService
         }
 
         var providerTasks = _providers
-            .Where(x => x.IsEnabled)
+            .Where(x => x.IsEnabled && (!onlyHighQuality || x.Weight > 1))
             .Select(provider => GetStreamWithTimeout(provider, league, team));
 
         var streams = await Task.WhenAll(providerTasks);
@@ -160,7 +160,7 @@ public class StreamService
 
             try
             {
-                var stream = await GetGameStream(game.League, game.HomeTeam);
+                var stream = await GetGameStream(game.League, game.HomeTeam, onlyHighQuality: i <= 20);
 
                 // use LAN domain for recording if defined, else the main domain
                 var hlsDomain = !string.IsNullOrEmpty(_lazyDanLanUrl)
