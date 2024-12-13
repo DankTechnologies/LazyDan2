@@ -3,8 +3,8 @@ using System.Text.RegularExpressions;
 namespace LazyDan2.Services.Providers;
 public class BestSolarisService : IGameStreamProvider
 {
-    public int Weight { get; } = 2;
-    public bool IsEnabled { get; } = true;
+    public int Weight { get; } = 1;
+    public bool IsEnabled { get; } = false;
     public string Name { get; } = "BestSolaris";
 
     private const string _homeUrl = "https://v3.bestsolaris.com";
