@@ -8,6 +8,8 @@ public class OneStreamService : IGameStreamProvider
     public bool IsEnabled { get; } = true;
     public string Name { get; } = "OneStream";
 
+    private const string _originUrl = "https://googlapisapi.com";
+
     private const string _homeUrl = "https://1stream.eu";
 
     private readonly HttpClient _httpClient;
@@ -15,8 +17,8 @@ public class OneStreamService : IGameStreamProvider
     public OneStreamService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _httpClient.DefaultRequestHeaders.Add("Referer", $"{_homeUrl}/");
-        _httpClient.DefaultRequestHeaders.Add("Origin", _homeUrl);
+        _httpClient.DefaultRequestHeaders.Add("Referer", $"{_originUrl}/");
+        _httpClient.DefaultRequestHeaders.Add("Origin", _originUrl);
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
         _httpClient.Timeout = TimeSpan.FromSeconds(20);
     }
@@ -92,6 +94,6 @@ public class OneStreamService : IGameStreamProvider
 
         var url = Encoding.UTF8.GetString(Convert.FromBase64String(urlB64));
 
-        return $"/spoof/playlist?url={url}&origin={_homeUrl}";
+        return $"/spoof/playlist?url={url}&origin={_originUrl}";
     }
 }
